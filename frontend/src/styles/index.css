@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{
+  --bg: #F5F5FF;
+  --primary:#6C63FF;
+  --secondary:#EDEBFF;
+  --sidebar:#202124;
+  --border:#ECECEC;
+}
+
+body{
+  background: var(--bg);
+}
+
+/* Convenience utilities */
+.bg-bg{ background: var(--bg); }
+.bg-primary{ background: var(--primary); }
+.text-primary{ color: var(--primary); }
+.border-border{ border-color: var(--border); }
+
+/* Hide scrollbar for Chrome, Edge and Safari */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
