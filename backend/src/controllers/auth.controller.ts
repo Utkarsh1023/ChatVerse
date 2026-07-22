@@ -42,8 +42,8 @@ export const register = async (req: Request, res: Response) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "lax",
-      secure: false,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production" ? true : false,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -90,8 +90,8 @@ export const login = async (req: Request, res: Response) => {
 
     res.cookie("token", token, {
       httpOnly: true,
-      sameSite: "lax",
-      secure: false,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production" ? true : false,
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -119,6 +119,35 @@ export const logout = (req: Request, res: Response) => {
     success: true,
     message: "Logged out successfully",
   });
+};
+
+// Socket.IO token endpoint — returns a JWT that the client can use for socket auth
+// The client reads this token from the response and passes it via socket handshake
+export const getSocketToken = async (req: Request, res: Response) => {
+  try {
+    const tokenUser = (req as any).user;
+    const userId: string | undefined =
+      tokenUser?._id?.toString?.() ?? tokenUser?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const token = generateToken(userId);
+
+    return res.json({
+      success: true,
+      token,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
 };
 
 export const me = async (req: Request, res: Response) => {

@@ -19,21 +19,34 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const [socket, setSocket] = useState<Socket<ServerToClientEvents, any> | null>(null);
   const socketRef = useRef<Socket | null>(null);
 
-  // Token sourcing: for now, try to read from a non-httpOnly cookie if present.
-  // If you haven't created one, pass a token via your app-specific flow.
-  const token = useMemo(() => {
-    // If you store JWT in memory/localStorage, read it here.
-    // Your backend uses httpOnly cookies for REST, so default to undefined.
-    // Example:
-    // const t = window.localStorage.getItem("token");
-    // return t ?? undefined;
-    return undefined as string | undefined;
-  }, []);
+  // Fetch socket token from backend on auth change
+  const [socketToken, setSocketToken] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setSocketToken(undefined);
+      return;
+    }
 
-    const s = createSocket(token);
+    // Fetch a JWT token for socket.io authentication
+    const fetchToken = async () => {
+      try {
+        const api = (await import("../api/axios")).default;
+        const res = await api.get("/auth/socket-token");
+        setSocketToken(res.data.token);
+      } catch (err) {
+        console.error("Failed to fetch socket token:", err);
+        setSocketToken(undefined);
+      }
+    };
+
+    fetchToken();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !socketToken) return;
+
+    const s = createSocket(socketToken);
 
     setSocket(s);
 
@@ -46,7 +59,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         s.disconnect();
         setSocket(null);
     };
-}, [user?.id, token]);
+}, [user?.id, socketToken]);
 
   const ctx: SocketCtx = useMemo(
     () => ({

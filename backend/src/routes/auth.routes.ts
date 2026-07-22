@@ -5,6 +5,7 @@ import {
   login,
   logout,
   me,
+  getSocketToken,
 } from "../controllers/auth.controller";
 
 
@@ -21,5 +22,8 @@ router.get("/me", protect, me);
 
 // Logout
 router.post("/logout", logout);
+
+// Socket token endpoint — returns a JWT for socket.io auth
+router.get("/socket-token", protect, getSocketToken);
 
 export default router;

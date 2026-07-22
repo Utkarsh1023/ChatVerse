@@ -5,7 +5,7 @@ import { io } from "socket.io-client";
 // For now, we rely on a token string you can pass via AuthContext or env.
 // Production: expose a secure endpoint like GET /api/auth/socket-token.
 
-const WS_URL = (typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_WS_URL) || "http://localhost:5000";
+const WS_URL = import.meta.env.VITE_WS_URL || "http://localhost:5000";
 
 export const createSocket = (token?: string) => {
   return io(WS_URL, {
