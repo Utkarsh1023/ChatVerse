@@ -1,32 +1,34 @@
-import type { UploadedMedia } from "../services/cloudinaryPostUpload";
 import { uploadPostMedia } from "./cloudinaryPostUpload";
-import type { IMention, Visibility } from "../models/Post";
 import { createPostRepo, getUserPostsRepo } from "../repositories/posts.repository";
 
 export const createPostService = async (
   input: {
-    authorId: string;
+    user: string;
     caption: string;
-    visibility: Visibility;
-    location?: string;
-    hashtags?: string[];
-    mentions?: IMention[];
-    media: UploadedMedia[];
+    mediaUrl: string;
+    mediaType: "image" | "video";
   },
   ctx: { files?: any }
 ) => {
-  const uploadedMedia: UploadedMedia[] = ctx.files?.length
-    ? await uploadPostMedia(ctx.files)
-    : input.media;
+  // If files were uploaded, upload them to Cloudinary and use the first one
+  if (ctx.files?.length) {
+    const uploadedMedia = await uploadPostMedia(ctx.files);
+    const first = uploadedMedia[0];
+    const post = await createPostRepo({
+      user: input.user,
+      caption: input.caption ?? "",
+      mediaUrl: first.url,
+      mediaType: first.type,
+    });
+    return post;
+  }
 
+  // Otherwise use the provided mediaUrl/mediaType
   const post = await createPostRepo({
-    authorId: input.authorId,
+    user: input.user,
     caption: input.caption ?? "",
-    visibility: input.visibility,
-    location: input.location,
-    hashtags: input.hashtags,
-    mentions: input.mentions,
-    media: uploadedMedia,
+    mediaUrl: input.mediaUrl,
+    mediaType: input.mediaType,
   });
 
   return post;

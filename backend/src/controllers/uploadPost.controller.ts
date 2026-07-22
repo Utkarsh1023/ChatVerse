@@ -6,9 +6,9 @@ import { createPostBodySchema } from "../validators/posts.validators";
 /**
  * Flow: POST /api/upload/post (multipart/form-data)
  * - field name: "media" (array of image/video)
- * - body fields (optional): caption, visibility, location, hashtags, mentions
+ * - body fields (optional): caption
  *
- * Returns uploaded media so frontend can call POST /api/posts next.
+ * Returns uploaded media info so frontend can call POST /api/posts next.
  */
 export const uploadPost = async (req: Request, res: Response) => {
   // Ensure authenticated user (used for future authorization/ownership checks)
@@ -17,26 +17,9 @@ export const uploadPost = async (req: Request, res: Response) => {
   const files = (req as any).files as Express.Multer.File[] | undefined;
   const uploaded = await uploadPostMedia(files ?? []);
 
-  // Optional: validate non-file fields early if provided
-  // (Doesn't create post; just helps catch obvious client errors.)
-  const maybeCaption = req.body.caption;
-  const maybeVisibility = req.body.visibility;
-
-  if (maybeCaption !== undefined || maybeVisibility !== undefined) {
-    // Use schema only when client sends these fields
-    createPostBodySchema.parse({
-      caption: req.body.caption,
-      visibility: req.body.visibility,
-      location: req.body.location,
-      hashtags: req.body.hashtags
-        ? JSON.parse(req.body.hashtags as string)
-        : undefined,
-      mentions: req.body.mentions
-        ? JSON.parse(req.body.mentions as string)
-        : undefined,
-      // media is required by schema; provide from uploaded output
-      media: JSON.parse(req.body.media ?? "[]"),
-    } as any);
+  // Validate caption if provided
+  if (req.body.caption !== undefined) {
+    createPostBodySchema.parse({ caption: req.body.caption });
   }
 
   return res.status(201).json({
