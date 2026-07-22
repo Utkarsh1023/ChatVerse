@@ -22,8 +22,7 @@ app.use(cookieParser());
 
 app.use(
   cors({
-    // origin: "https://your-frontend.vercel.app",
-    origin: "http://localhost:5173",
+    origin: "https://chat-verse-gules.vercel.app/dashboard",
     credentials: true,
   })
 );
