@@ -1,36 +1,58 @@
-# Production Deployment Fix - ✅ COMPLETE
+# Deployment Fix - COMPLETED
 
-## All Issues Fixed
+## Code Changes Summary
 
-- [x] **Fix 1**: CORS origin in `app.ts` — uses `process.env.CORS_ORIGIN` (no hardcoded path)
-- [x] **Fix 2**: Axios baseURL in `axios.ts` — uses `import.meta.env.VITE_API_URL` env var
-- [x] **Fix 3**: Created `frontend/vercel.json` — SPA rewrites fix 404 on refresh
-- [x] **Fix 4**: Socket.IO CORS in `server.ts` — uses `process.env.CORS_ORIGIN` env var
-- [x] **Fix 5**: `backend/package.json` — `"build": "tsc --noEmit"`, `"start": "tsx src/server.ts"`
-- [x] **Fix 6**: `User.ts` — `fullName` changed from `required: true` to `default: ""`
-- [x] **Fix 7**: No conflict — `main.tsx` correctly imports `App.jsx` (not `App.tsx`)
-- [x] **Fix 8**: Added `GET /api/auth/socket-token` endpoint + `SocketContext` fetches it
-- [x] **Fix 9**: Express downgraded from v5 to v4.21.0
-- [x] **Fix 10**: `dist/` deleted, `.gitignore` already excludes it, `tsc --noEmit` type-checks only
-- [x] **TypeScript:** `npm run build` passes with zero errors
+### ✅ Step 1-6: All Code Edits Applied
+- `backend/package.json` - Added `build` script (`tsc`), changed `start` to `node dist/server.js`, added `engines`, updated `@types/node` to v22
+- `backend/src/app.ts` - Fixed CORS with trimmed comparison and `some()` array check
+- `backend/src/server.ts` - Socket.IO CORS now uses `CLIENT_URL` (same as Express), removed redundant `dotenv.config()`
+- `backend/tsconfig.json` - Added `moduleResolution: "Node"`, `declaration`, `sourceMap`
+- `frontend/src/socket/socket.ts` - Added documentation for production WS URL
+- `frontend/src/vite-env.d.ts` - Made VITE env vars optional (with `?`)
 
-## Env Variables Required for Production
+## Step 7: Deployment Instructions
 
-### Backend (.env / Render)
-```
-NODE_ENV=production
-PORT=5000
-MONGODB_URI=<your-mongodb-atlas-uri>
-JWT_SECRET=<your-secret>
-CLOUDINARY_CLOUD_NAME=<your-value>
-CLOUDINARY_API_KEY=<your-value>
-CLOUDINARY_API_SECRET=<your-value>
-CORS_ORIGIN=https://chat-verse-gules.vercel.app
-```
+### Render (Backend) Setup
 
-### Frontend (Vercel env vars)
-```
-VITE_API_URL=https://chatverse-4.onrender.com/api
-VITE_WS_URL=https://chatverse-4.onrender.com
-```
+1. **Build Command** (in Render Dashboard):
+   ```
+   npm install && npm run build
+   ```
+
+2. **Start Command** (in Render Dashboard):
+   ```
+   npm start
+   ```
+
+3. **Environment Variables** (set in Render Dashboard):
+   ```
+   NODE_ENV=production
+   CLIENT_URL=https://chat-verse-gules.vercel.app
+   PORT=5000
+   MONGODB_URI=your_mongodb_connection_string
+   JWT_SECRET=your_jwt_secret
+   CLOUDINARY_CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_api_key
+   CLOUDINARY_API_SECRET=your_api_secret
+   ```
+
+4. **Node Version** (in Render Dashboard):
+   Select **Node 20** (recommended) or **Node 22**.
+
+### Vercel (Frontend) Setup
+
+1. **Environment Variables** (in Vercel Dashboard → Project Settings → Environment Variables):
+   ```
+   VITE_API_URL=https://chatverse-4.onrender.com/api
+   VITE_WS_URL=https://chatverse-4.onrender.com
+   ```
+
+2. **No other configuration needed** — `vercel.json` and build settings are already correct.
+
+### Key Points
+
+- The `dist/` folder is in `.gitignore`, so it will **not** be committed. Render's build command (`npm install && npm run build`) compiles TypeScript on the server.
+- `tsx` is only used for development (`npm run dev`). Production uses compiled JS from `dist/`.
+- CORS now properly trims whitespace from env variables and uses `some()` for flexible comparison.
+- Socket.IO CORS now uses the same `CLIENT_URL` as Express CORS (no separate `CORS_ORIGIN` needed).
 

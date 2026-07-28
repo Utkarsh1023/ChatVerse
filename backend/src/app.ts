@@ -15,11 +15,16 @@ import { errorMiddleware } from "./middleware/error.middleware";
 dotenv.config();
 
 const app = express();
+
+// Build allowed origins list, trimming any whitespace from env vars
+const rawClientUrl = (process.env.CLIENT_URL || "").trim();
 const allowedOrigins = [
-  process.env.CLIENT_URL,
+  rawClientUrl,
   "http://localhost:5173",
-  
-];
+].filter(Boolean); // remove empty strings
+
+console.log("[cors] allowed origins:", allowedOrigins);
+
 // Middleware
 app.use(express.json());
 app.use(cookieParser());
@@ -27,11 +32,16 @@ app.use(cookieParser());
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+      // Allow requests with no origin (e.g., server-to-server, Postman, curl)
+      if (!origin) {
+        return callback(null, true);
       }
+      // Check if origin is in our allowed list (trimmed comparison)
+      if (allowedOrigins.some((allowed) => allowed && allowed.trim() === origin.trim())) {
+        return callback(null, true);
+      }
+      console.warn(`[cors] blocked origin: ${origin}`);
+      callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   })
