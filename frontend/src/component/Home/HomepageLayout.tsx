@@ -34,12 +34,21 @@ export default function HomePage() {
   const [stories, setStories] = useState<Story[]>(initialStories);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);  
   const [posts, setPosts] = useState([]);
+  const [postsError, setPostsError] = useState<string | null>(null);
+  const [postsLoading, setPostsLoading] = useState(true);
   const fetchPosts = async () => {
+    setPostsLoading(true);
+    setPostsError(null);
     try {
       const res = await getPosts();
       setPosts(res.data.posts);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      const message = err?.response?.data?.message || err?.message || "Failed to load posts. Please make sure you are logged in.";
+      console.error("Failed to fetch posts:", message);
+      setPostsError(message);
+      setPosts([]);
+    } finally {
+      setPostsLoading(false);
     }
   };
   useEffect(() => {
@@ -79,7 +88,7 @@ export default function HomePage() {
                       onOpenStory={(story) => setSelectedStory(story)}
                     />
 
-                    <Feed posts={posts} />
+                    <Feed posts={posts} error={postsError} loading={postsLoading} />
 
                   </div>
 

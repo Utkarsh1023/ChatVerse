@@ -8,7 +8,8 @@ import { io } from "socket.io-client";
 // VITE_WS_URL should point to the backend origin (no path), e.g.:
 //   http://localhost:5000              (dev)
 //   https://chatverse-4.onrender.com  (production)
-const WS_URL = import.meta.env.VITE_WS_URL || "http://localhost:5000";
+// Supports both VITE_WS_URL and VITE_SOCKET_URL for compatibility
+const WS_URL = import.meta.env.VITE_WS_URL || import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
 
 export const createSocket = (token?: string) => {
   return io(WS_URL, {
