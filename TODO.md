@@ -1,8 +1,8 @@
-# TODO — Fix Search Modal
+# Deploy Backend to Render — Task List
 
-## Steps
-- [x] Analyzed root cause: search input in CreateSearchModal.tsx is missing value/onChange bindings
-- [x] Fix CreateSearchModal.tsx: bind input value/onChange, add autoFocus, reset on close
-- [x] Fix userService.ts: encode query with encodeURIComponent
-- [x] Wire up Add Friend / Accept / Message buttons on search result cards
-- [ ] Verify search now returns users (type in modal, add friend, message)
+- [x] Fix `backend/package.json` — `start` script → `node dist/server.js` + add `engines.node`
+- [x] Create `render.yaml` at repo root for the backend Web Service
+- [x] Update `frontend/.env` to point to `https://chatverse-backend.onrender.com`
+- [x] Create `README-DEPLOY.md` with full step-by-step Render deployment instructions
+- [x] Verify backend builds locally (`npm run build` → `dist/`)
+

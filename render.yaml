@@ -1,0 +1,39 @@
+# Render Blueprint — Backend Web Service
+# Deploy: push this repo to GitHub → connect to Render → Render reads this file
+# and provisions the service automatically.
+#
+# The deployed URL will be:  https://chatverse-backend.onrender.com
+# (Render assigns "<service-name>.onrender.com"; rename later if taken.)
+
+services:
+  - type: web
+    name: chatverse-backend
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Render injects its own PORT — this is just a safe default.
+      - key: PORT
+        value: 10000
+      # CORS + Socket.IO allowed origin -> deployed Vercel frontend
+      - key: CLIENT_URL
+        value: https://chat-verse-gules.vercel.app
+      # ---- Fill these in the Render dashboard after first deploy ----
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CLOUD_NAME
+        sync: false
+      - key: API_KEY
+        sync: false
+      - key: API_SECRET
+        sync: false
+
