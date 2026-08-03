@@ -1,8 +1,5 @@
 import { motion } from "framer-motion";
-import {
-  HiOutlineUserPlus,
-} from "react-icons/hi2";
-
+import {useState, useEffect} from "react";
 import Sidebar from "../layouts/Sidebar";
 
 import StatsCards from "./StatsCards";
@@ -10,21 +7,56 @@ import FriendsToolbar from "./FriendsToolbar";
 import FriendsGrid from "./FriendsGrid";
 import FriendRequests from "./FriendRequests";
 import Suggestions from "./Suggestions";
+import api from "../../api/axios";
+import { searchUsers, getSuggestions } from "../../services/userService";
+import { User } from "../../types/user";
+import MobileBottomNav from "../layouts/MobileBottomNav";
+import CreatePostModal from "../CreatePostModel";
 
 export default function ConnectionsPage() {
+  const [search, setSearch] = useState("");
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+    const user = { username: "" };
+  const [openCreatePost, setOpenCreatePost] = useState(false);
+  useEffect(() => {
+  const timer = setTimeout(async () => {
+    try {
+      setLoading(true);
+
+      if (search.trim()) {
+        const data = await searchUsers(search);
+        setUsers(data);
+      } else {
+        const data = await getSuggestions();
+        setUsers(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [search]);
+
   return (
     <div className="min-h-screen bg-slate-950 p-2">
       <div className="mx-auto h-[calc(100vh-24px)] max-w-full overflow-hidden">
         <div className="flex h-full gap-2 overflow-hidden rounded-3xl bg-slate-900/70 backdrop-blur-xl">
           {/* Sidebar */}
           <div className="hidden shrink-0 lg:block">
-            <Sidebar />
+            <Sidebar 
+              username={user.username}
+              onOpenCreatePost={() => setOpenCreatePost(true)}
+            />
           </div>
           <main className="flex-1 overflow-y-auto">
             <div className="space-y-4 p-1">
               {/* Hero */}
               <motion.section
-                initial={{ opacity: 0, y: 25 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="
                   relative
@@ -39,26 +71,36 @@ export default function ConnectionsPage() {
               >
                 {/* Glow */}
                 <div className="absolute -top-24 right-0 h-72 w-72 rounded-full bg-violet-600/20 blur-[120px]" />
-                <div className="absolute bottom-0 left-0 h-56 w-56 rounded-full bg-cyan-500/20 blur-[120px]" />
-                <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <h1 className="text-3xl font-bold text-white lg:text-4xl">
-                      Friends Dashboard
-                    </h1>
-                    <p className="mt-2 max-w-3xl text-slate-400 leading-7">
-                      Connect with developers, manage your friends,
-                      accept requests and grow your professional
-                      network.
-                    </p>
-                  </div>
+                <div className="flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/[0.04] p-6">
+
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-white">
+                            Friend Dashboard
+                        </h1>
+                        <p className="mt-2 text-slate-400">
+                            Connect, chat and grow your network.
+                        </p>
+                    </div>
+                    <FriendsToolbar
+                        search={search}
+                        setSearch={setSearch}
+                    />
                 </div>
+
+            </div>
               </motion.section>
               {/* Main Grid */}
               <div className="grid gap-8 xl:grid-cols-[2fr_380px]">
                 <div className="space-y-4">
                   <StatsCards />
-                  <FriendsToolbar />
-                  <FriendsGrid />
+                  
+                  <FriendsGrid 
+                    friends={users}
+                    loading={loading}
+                    search={search}
+                    setSearch={setSearch}
+                  />
                 </div>
                 {/* Right Sidebar */}
                 <div className="space-y-2">
@@ -70,6 +112,11 @@ export default function ConnectionsPage() {
           </main>
         </div>
       </div>
+      <MobileBottomNav onOpenCreatePost={() => setOpenCreatePost(true)} />
+        <CreatePostModal
+        open={openCreatePost}
+        onClose={() => setOpenCreatePost(false)}
+      />
     </div>
   );
 }

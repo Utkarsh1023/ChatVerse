@@ -15,12 +15,24 @@ import {
   HiBookmark 
 } from "react-icons/hi2";
 
+export interface PostMedia {
+  url: string;
+  public_id: string;
+  type: "image" | "video" | "raw" | "audio";
+  format?: string;
+  width?: number;
+  height?: number;
+  duration?: number;
+  size?: number;
+  thumbnailUrl?: string;
+}
+
 type PostProps = {
   postId: string;
   user: string;
   username: string;
   avatar: string;
-  image: string;
+  media: PostMedia[];
   caption: string;
   likesCount: number;
   initialLiked: boolean;
@@ -33,13 +45,15 @@ export default function PostCard({
   user,
   username,
   avatar,
-  image,
+  media,
   caption,
   likesCount,
   initialLiked,
-  comments,
   time,
 }: PostProps) {
+  // A single media item is rendered directly; carousels can be added later.
+  const mediaItem = media[0];
+  const isVideo = mediaItem?.type === "video";
   const [liked, setLiked] = useState(initialLiked);
   const [likeCount, setLikeCount] = useState(likesCount);
   const [likeLoading, setLikeLoading] = useState(false);
@@ -49,11 +63,7 @@ export default function PostCard({
   const [commentList, setCommentList] = useState<CommentData[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user : user1 } = useAuth();
 
-  const displayName = user1?.fullName || "";
-  const avatarSrc = user1?.avatar || "";
-  const userName = user1?.username || "";
   const fetchComments = useCallback(async () => {
     try {
       const res = await getComments(postId);
@@ -132,26 +142,25 @@ export default function PostCard({
       initial={{ opacity: 0, y: 25 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2 }}
-      className="mb-8 overflow-hidden rounded-3xl border border-white/10 bg-slate-900/70 backdrop-blur-xl"
+      className="mb-4 overflow-hidden rounded-3xl border border-white/10 bg-slate-900/70 backdrop-blur-xl"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-5">
         <div className="flex items-center gap-4">
-          {/* <Link to={`/profile/${userName}`}> */}
-          <Link to={`/profile`}>
+          <Link to={`/dashboard/profile/${username}`}>
             <img
               src={avatar}
               alt={user}
-              className="h-12 w-12 rounded-full object-cover cursor-pointer transition hover:scale-105"
+              className="h-8 w-8 rounded-full object-cover cursor-pointer transition hover:scale-105"
             />
           </Link>
           <div>
-            <Link to={`/profile`}>
-            <h3 className="font-semibold text-white">{user}</h3>
-            <div className="flex items-center gap-2 text-sm text-slate-400">
-              <span>@{username}</span>
-              <span>•</span>
-              <span>{time}</span>
+            <Link to={`/dashboard/profile/${username}`}>
+            {/* <h3 className="font-semibold text-white">{user}</h3> */}
+            <div className="flex items-center gap-2 text-sm text-white">
+              <span>{username}</span>
+              <span className="text-slate-400">•</span>
+              <span className="text-slate-400">{time}</span>
             </div>
             </Link>
           </div>
@@ -159,20 +168,30 @@ export default function PostCard({
         
       </div>
 
-      {/* Image */}
+      {/* Media (image or video) */}
       <div className="overflow-hidden">
-        <motion.img
-          whileHover={{ scale: 1.03 }}
-          transition={{ duration: 0.4 }}
-          src={image}
-          alt="Post"
-          className="h-[500px] w-full object-cover"
-        />
+        {isVideo ? (
+          <video
+            src={mediaItem?.url}
+            poster={mediaItem?.thumbnailUrl}
+            controls
+            preload="metadata"
+            className="h-[500px] w-full object-cover"
+          />
+        ) : (
+          <motion.img
+            whileHover={{ scale: 1.03 }}
+            transition={{ duration: 0.4 }}
+            src={mediaItem?.url}
+            alt="Post"
+            className="h-[500px] w-full object-cover"
+          />
+        )}
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between px-5 pt-5">
-        <div className="flex items-center gap-6">
+      <div className="flex items-center justify-between px-5 pt-2">
+        <div className="flex items-center gap-2">
           <motion.button
             whileTap={{ scale: 0.8 }}
             onClick={handleLikeToggle}
@@ -184,9 +203,15 @@ export default function PostCard({
               <HiOutlineHeart className="text-3xl text-white hover:text-red-400" />
             )}
           </motion.button>
+          <span className="text-sm font-semibold text-white">
+            {likeCount}
+          </span>
           <button onClick={() => setShowComments(true)}>
             <HiOutlineChatBubbleOvalLeft className="text-3xl text-white hover:text-cyan-400" />
           </button>
+          <span className="text-sm font-semibold text-white">
+            {commentList.length}
+          </span>
         </div>
         <button
           onClick={() => setBookmarked(!bookmarked)}
@@ -201,25 +226,14 @@ export default function PostCard({
         </button>
       </div>
 
-      {/* Likes */}
-      <div className="px-5 pt-4">
-        <p className="font-semibold text-white">{likeCount} likes</p>
-      </div>
-
       {/* Caption */}
-      <div className="px-5 pt-3">
+      <div className="px-5 pt-1">
         <p className="text-slate-300">
-          <span className="mr-2 font-bold text-white">@{username}</span>
+          <span className="mr-2 font-bold text-white">{username}</span>
           {caption}
         </p>
       </div>
 
-      {/* Comments */}
-      <div className="px-5 pt-3">
-        <button onClick={() => setShowComments(true)} className="text-sm text-slate-400 hover:text-white">
-          View all {commentList.length} comments
-        </button>
-      </div>
 
       {/* Comment Box */}
       <div className="border-t border-white/10 mt-5">

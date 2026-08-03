@@ -6,9 +6,10 @@ import {
   HiOutlineHome,
   HiOutlineChatBubbleLeftRight,
   HiOutlineUserGroup,
-  HiOutlinePhone,
+  HiMagnifyingGlass ,
   HiOutlineBell,
   HiOutlineArrowLeftOnRectangle,
+  HiMiniPlus ,
 } from "react-icons/hi2";
 import { IoSettingsOutline } from "react-icons/io5";
 import { BsChatSquareHeartFill } from "react-icons/bs";
@@ -23,7 +24,16 @@ const menu = [
     title: "Chats",
     icon: HiOutlineChatBubbleLeftRight,
     path: "/dashboard/chats",
-    badge: 5,
+  },
+  {
+    title: "Search",
+    icon: HiMagnifyingGlass,
+    path: "",
+  },
+  {
+    title: "Posts",
+    icon: HiMiniPlus,
+    path: "",
   },
   {
     title: "Friends",
@@ -31,30 +41,34 @@ const menu = [
     path: "/dashboard/connections",
   },
   {
-    title: "Calls",
-    icon: HiOutlinePhone,
-    path: "/dashboard/calls",
-  },
-  {
     title: "Notifications",
     icon: HiOutlineBell,
     path: "/dashboard/notifications",
-    badge: 12,
   },
   {
     title: "Settings",
     icon: IoSettingsOutline,
-    path: "/settings",
+    path: "/dashboard/settings",
   },
 ];
-
-export default function Sidebar() {
+type userProps = {
+  username?: string;
+  onOpenCreatePost: () => void;
+  onOpenSearch: () => void;
+}
+export default function Sidebar({ username, onOpenCreatePost, onOpenSearch,}: userProps) {
   const {logout} =useAuth();
   const navigate= useNavigate();
   const { user } = useAuth();
 
-  const displayName = user?.fullName || "";
+  const displayName = user?.name || user?.fullName || "";
   const avatarSrc = user?.avatar || "";
+  // 🐞 TRACE: use the authenticated user's username as the source of truth for
+  // the profile link so the sidebar always points to the logged-in user.
+  const profileUsername = username || user?.username || "";
+  console.log(
+    `[Sidebar] Profile link -> /dashboard/profile/${profileUsername} (prop=${username}, auth=${user?.username})`
+  );
   const handleLogout = async () => {
     console.log("Logout clicked");
 
@@ -120,7 +134,55 @@ export default function Sidebar() {
 
           {menu.map((item) => {
             const Icon = item.icon;
-
+            if (item.title === "Posts") {
+              return (
+                <motion.button
+                  key={item.title}
+                  whileHover={{ scale: 1.08, x: 5 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={onOpenCreatePost}
+                  className="
+                    relative
+                    h-14
+                    w-full
+                    rounded-2xl
+                    flex
+                    items-center
+                    justify-center
+                    transition
+                    hover:bg-white/5
+                  "
+                >
+                  <Icon size={25} className="text-white" />
+                </motion.button>
+              );
+            }
+            if (item.title === "Search") {
+              return (
+                <motion.button
+                  key={item.title}
+                  whileHover={{ scale: 1.08, x: 5 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={onOpenSearch}
+                  className="
+                    relative
+                    h-14
+                    w-full
+                    rounded-2xl
+                    flex
+                    items-center
+                    justify-center
+                    transition
+                    hover:bg-white/5
+                  "
+                >
+                  <Icon
+                    size={25}
+                    className="text-white"
+                  />
+                </motion.button>
+              );
+            }
             return (
               <NavLink
                 key={item.title}
@@ -158,7 +220,7 @@ export default function Sidebar() {
                       className="text-white"
                     />
 
-                    {item.badge && (
+                    {/* {item.badge && (
                       <span
                         className="
                         absolute
@@ -176,7 +238,7 @@ export default function Sidebar() {
                       >
                         {item.badge}
                       </span>
-                    )}
+                    )} */}
 
                   </motion.div>
 
@@ -190,7 +252,7 @@ export default function Sidebar() {
       {/* Bottom */}
 
       <div>
-        <Link to="/profile">
+        <Link to={`/dashboard/profile/${profileUsername}`}>
         <motion.div
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.97 }}

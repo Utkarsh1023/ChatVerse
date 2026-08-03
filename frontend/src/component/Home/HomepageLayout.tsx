@@ -2,37 +2,25 @@ import { useState, useEffect } from "react";
 import { getPosts } from "../../api/postApi";
 import Sidebar from "../layouts/Sidebar";
 import HomeHeader from "./HomeHeader";
-// import CreatePost from "./CreatePost";
 import StoryBar from "./StoryBar";
 import Feed from "./Feed";
 import RightPanel from "./RightPanel";
 import CreatePostModal from "../CreatePostModel";
 import CreateStoryModal from "../CreateStoryModel";
-import StoryViewerModal from "../StoryViewerModal"
-import type { Story } from "../StoryViewerModal";
-
+import StoryViewerModal from "../StoryViewerModal";
+import CreateSearchModal from "../CreateSearchModal";
+import MobileBottomNav from "../layouts/MobileBottomNav";
+import { getStories, normalizeStoryUser } from "../../api/story";
+import { useAuth } from "../../context/AuthContext";
+import type { StoryGroup } from "../../types/story";
 
 export default function HomePage() {
+  const { user } = useAuth();
   const [openPost, setOpenPost] = useState(false);
   const [openStory, setOpenStory] = useState(false);
-
-  const initialStories: Story[] = [
-  {
-    id: 1,
-    name: "Your Story",
-    avatar: "https://i.pravatar.cc/150?img=12",
-    isMine: true,
-  },
-  {
-    id: 2,
-    name: "Prachi",
-    avatar: "https://i.pravatar.cc/150?img=32",
-    media: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=900",
-    type: "image",
-  },
-];
-  const [stories, setStories] = useState<Story[]>(initialStories);
-  const [selectedStory, setSelectedStory] = useState<Story | null>(null);  
+  const [openSearch, setOpenSearch] = useState(false);
+  const [storyGroups, setStoryGroups] = useState<StoryGroup[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [posts, setPosts] = useState([]);
   const [postsError, setPostsError] = useState<string | null>(null);
   const [postsLoading, setPostsLoading] = useState(true);
@@ -51,9 +39,45 @@ export default function HomePage() {
       setPostsLoading(false);
     }
   };
+
+  /**
+   * GET /stories now returns GROUPED data:
+   *   [ { user: {...}, stories: [ {...}, {...} ] }, ... ]
+   * One circle per user, chronological stories inside each group.
+   */
+  const fetchStories = async () => {
+    try {
+      const res = await getStories();
+
+      const groups: StoryGroup[] = (res ?? []).map((group: any) => ({
+        user: normalizeStoryUser(group.user),
+        stories: (group.stories ?? []).map((story: any) => ({
+          _id: story._id,
+          user: story.user,
+          media: story.media,
+          type: story.type,
+          caption: story.caption,
+          createdAt: story.createdAt,
+          expiresAt: story.expiresAt,
+        })),
+      }));
+
+      setStoryGroups(groups);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchPosts();
+    fetchStories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleStoryDeleted = async () => {
+    await fetchStories();
+  };
+
   return (
     <>
       {/* Home */}
@@ -63,7 +87,11 @@ export default function HomePage() {
           <div className="flex h-full gap-2 overflow-hidden rounded-3xl bg-slate-900/70 backdrop-blur-xl">
             {/* Sidebar */}
             <div className="hidden shrink-0 lg:block">
-              <Sidebar />
+              <Sidebar 
+                username={user?.username || ""} 
+                onOpenCreatePost={() => setOpenPost(true)}
+                onOpenSearch={() => setOpenSearch(true)}
+              />
             </div>
 
             {/* Main */}
@@ -80,12 +108,10 @@ export default function HomePage() {
 
                   <div className="flex-1 overflow-y-auto p-6">
 
-                    {/* <CreatePost /> */}
-
                     <StoryBar
-                      stories={stories}
+                      groups={storyGroups}
                       onCreateStory={() => setOpenStory(true)}
-                      onOpenStory={(story) => setSelectedStory(story)}
+                      onOpenStory={(group) => setSelectedUserId(group.user._id)}
                     />
 
                     <Feed posts={posts} error={postsError} loading={postsLoading} />
@@ -106,6 +132,9 @@ export default function HomePage() {
           </div>
 
         </div>
+        <MobileBottomNav
+  onOpenCreatePost={() => setOpenPost(true)}
+/>
       </div>
 
       {/* Modal - OUTSIDE the page */}
@@ -115,30 +144,28 @@ export default function HomePage() {
         onPostCreated={fetchPosts}
       />
       <CreateStoryModal
-          open={openStory}
-          onClose={() => setOpenStory(false)}
-          onUpload={(story) => {
-          setStories((prev) =>
-            prev.map((s) =>
-              s.isMine
-                ? {
-                    ...s,
-                    media: story.media,
-                    type: story.type,
-                    createdAt: story.createdAt,
-                  }
-                : s
-            )
-          );
-              setOpenStory(false);
-          }}
+        open={openStory}
+        onClose={() => setOpenStory(false)}
+        onUploaded={async () => {
+          await fetchStories();
+          setOpenStory(false);
+        }}
       />
-      
+
       <StoryViewerModal
-        open={selectedStory !== null}
-        story={selectedStory}
-        onClose={() => setSelectedStory(null)}
+        open={selectedUserId !== null}
+        groups={storyGroups}
+        initialUserId={selectedUserId}
+        currentUserId={user?.id || null}
+        onClose={() => setSelectedUserId(null)}
+        onDeleted={handleStoryDeleted}
+        onCreateStory={() => setOpenStory(true)}
+      />
+      <CreateSearchModal
+          open={openSearch}
+          onClose={() => setOpenSearch(false)}
       />
     </>
   );
 }
+

@@ -1,19 +1,42 @@
 import PostCard from "../Feeds/PostCard";
 
+export interface FeedMedia {
+  url: string;
+  public_id: string;
+  type: "image" | "video" | "raw" | "audio";
+  format?: string;
+  width?: number;
+  height?: number;
+  duration?: number;
+  size?: number;
+  thumbnailUrl?: string;
+}
+
 export interface FeedPost {
   _id: string;
-  user: {
-    name: string;
-    username: string;
-    avatar: string;
-  };
+  author:
+    | string
+    | {
+        _id: string;
+        name: string;
+        username: string;
+        avatar: string;
+      };
   caption: string;
-  mediaUrl: string;
-  mediaType: "image" | "video";
+  media: FeedMedia[];
+  tags?: string[];
+  location?: string;
+  privacy?: string;
   likes: string[];
-  comments: any[];
+  likesCount?: number;
+  comments: string[];
+  commentsCount?: number;
+  sharesCount?: number;
+  savedCount?: number;
+  isLiked?: boolean;
+  isSaved?: boolean;
   createdAt: string;
-  isLiked: boolean;
+  updatedAt?: string;
 }
 
 interface FeedProps {
@@ -68,21 +91,44 @@ export default function Feed({ posts, error, loading }: FeedProps) {
 
   return (
     <div className="mx-auto max-w-3xl py-8">
-      {posts.map((post) => (
-        <PostCard
-          key={post._id}
-          postId={post._id}
-          user={post.user.name}
-          username={post.user.username}
-          avatar={post.user.avatar}
-          image={`http://localhost:5000${post.mediaUrl}`}
-          caption={post.caption}
-          likesCount={post.likes.length}
-          initialLiked={post.isLiked}
-          comments={post.comments.length}
-          time={new Date(post.createdAt).toLocaleDateString()}
-        />
-      ))}
+      {posts.map((post) => {
+        // Normalize author (backend may send `author` as object or string id).
+        const author =
+          typeof post.author === "object" && post.author !== null
+            ? post.author
+            : {
+                _id: post.author as string,
+                name: "User",
+                username: "user",
+                avatar: "https://ui-avatars.com/api/?background=random",
+              };
+
+        // Normalize media (new schema: array). Fall back to a single-item array.
+        const media =
+          Array.isArray(post.media) && post.media.length > 0
+            ? post.media
+            : [];
+
+        const likesCount =
+          post.likesCount ?? post.likes?.length ?? 0;
+
+        return (
+          <PostCard
+            key={post._id}
+            postId={post._id}
+            user={author.name}
+            username={author.username}
+            avatar={author.avatar}
+            media={media}
+            caption={post.caption}
+            likesCount={likesCount}
+            initialLiked={post.isLiked ?? false}
+            comments={post.commentsCount ?? post.comments?.length ?? 0}
+            time={new Date(post.createdAt).toLocaleDateString()}
+          />
+        );
+      })}
     </div>
   );
 }
+

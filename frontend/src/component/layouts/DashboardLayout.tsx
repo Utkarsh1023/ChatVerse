@@ -1,42 +1,181 @@
-import {useState} from "react";
+import { useCallback, useEffect, useMemo, useState, } from "react";
+import { useSearchParams } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import ChatList from "./ChatList";
 import ChatWindow from "./ChatWindow";
-
+import CreatePostModal from "../CreatePostModel";
+import { getConversations, createOrGetConversation } from "../../services/chatService";
+import type { Conversation } from "../../types/chat";
+import type { User } from "../../types/user";
+import MobileBottomNav from "./MobileBottomNav";
+import { motion } from "framer-motion";
 export default function DashboardLayout() {
-  const [activePeerId, setActivePeerId] = useState("user2");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
+const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(false);
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchConversations = async () => {
+      try {
+        const data = await getConversations();
+        if (!mounted) return;
+
+        const list = Array.isArray(data) ? data : [];
+        setConversations(list);
+
+        // Prefer the conversation id from the URL query (?conversation=<id>),
+        // e.g. when navigating from a profile "Message" button. Fall back to
+        // the first conversation if none is requested or it is not found.
+        const requestedId = searchParams.get("conversation");
+        const target =
+          list.find((c) => c._id === requestedId) || list[0] || null;
+
+        if (target) {
+          setActiveConversationId(target._id);
+          // On small screens, open the chat window directly.
+          if (window.innerWidth < 1024) {
+            setShowChat(true);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load conversations:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchConversations();
+
+    return () => {
+      mounted = false;
+    };
+  }, [searchParams]);
+
+  const activeConversation = useMemo(
+    () => conversations.find((c) => c._id === activeConversationId) || null,
+    [conversations, activeConversationId]
+  );
+
+  // `activePeerId` is the other user's id — used for sending messages via socket.
+  const activePeerId = activeConversation?.user?._id || "";
+
+  // Derive the full peer object so ChatWindow never receives `undefined`.
+  const activeUser = activeConversation?.user as (User & { bio?: string }) | undefined;
+  const [createPostOpen, setCreatePostOpen] = useState(false);
+  const peer = {
+    _id: activeUser?._id || "",
+    name: activeUser?.name || "Select a conversation",
+    username: activeUser?.username || "",
+    avatar: activeUser?.avatar || "",
+    online: Boolean(activeUser?.isOnline),
+    isOnline: Boolean(activeUser?.isOnline),
+    lastSeen: activeUser?.lastSeen,
+    bio: activeUser?.bio || "",
+  };
+
+  const user = { username: "" };
+  const handleSelectConversation = useCallback((conversationId: string) => {
+  setActiveConversationId(conversationId);
+
+  if (window.innerWidth < 1024) {
+    setShowChat(true);
+  }
+}, []);
+  /**
+   * Called when a user is picked from the search dropdown.
+   * POST /api/conversations returns the existing conversation (or creates a new
+   * one), adds it to the top of the list (no duplicates), and selects it.
+   */
+  const handleStartConversation = useCallback(
+    async (user: User): Promise<Conversation> => {
+      const conversation = await createOrGetConversation(user._id);
+
+      setConversations((prev) => {
+        const exists = prev.some((c) => c._id === conversation._id);
+        return exists ? prev : [conversation, ...prev];
+      });
+
+      setActiveConversationId(conversation._id);
+      if (window.innerWidth < 1024) {
+        setShowChat(true);
+      }
+      return conversation;
+    },
+    []
+  );
 
   return (
-
-    <div className="min-h-screen bg-slate-950 p-2 ">
-
-      <div className="mx-auto h-[calc(100vh-24px)] max-w-full overflow-hidden">
-        <div className="flex h-full gap-2 overflow-hidden rounded-3xl  bg-slate-900/70 backdrop-blur-xl">
+    <div className="min-h-screen bg-slate-950 p-2 pb-20 lg:pb-2">
+      <div className="mx-auto h-[calc(100vh-80px)] lg:h-[calc(100vh-24px)] max-w-full overflow-hidden">
+        <div className="flex h-full overflow-hidden rounded-none bg-slate-900 lg:gap-2 lg:rounded-3xl lg:bg-slate-900/70 lg:backdrop-blur-xl">
           {/* Sidebar (always visible) */}
           <div className="hidden shrink-0 lg:block">
-            <Sidebar />
+            <Sidebar 
+              username={user.username}
+              onOpenCreatePost={() => setCreatePostOpen(true)}
+            />
           </div>
 
           {/* Chat panels */}
-          <div className="flex min-w-0 flex-1">
+          <div className="flex  min-w-0 flex-1 overflow-hidden">
             {/* Chat List (hide on small screens) */}
-            <div className="hidden shrink-0 lg:block">
-            <ChatList onSelectConversation={setActivePeerId} />
-
+            <div className={`${showChat ? "hidden lg:block" : "block"} w-full h-full  lg:w-[350px] xl:w-[370px] lg:shrink-0`}>
+              <ChatList
+                conversations={conversations}
+                loading={loading}
+                activeConversationId={activeConversationId}
+                onSelectConversation={handleSelectConversation}
+                onStartConversation={handleStartConversation}
+              />
             </div>
 
             {/* Chat Window (flexes) */}
-            <div className="min-w-0 flex-1 ml-2">
-              <ChatWindow activePeerId={activePeerId} />
-            </div>
-
+            <motion.div 
+              initial={{x:50}}
+              animate={{x:0}}
+              transition={{duration:0.25}}
+              className={`${showChat ? "flex" : "hidden"} min-w-0 flex-1 lg:flex`}>
+              <ChatWindow
+                activeConversationId={activeConversationId}
+                activePeerId={activePeerId}
+                peer={peer}
+                onBack={() => setShowChat(false)}
+              />
+            </motion.div>
 
             {/* Right sidebar now controlled by ChatWindow ellipsis button */}
             <div className="hidden shrink-0 xl:block" />
-
           </div>
         </div>
+        <CreatePostModal
+      open={createPostOpen}
+      onClose={() => setCreatePostOpen(false)}
+    />
       </div>
+      <div className="
+          fixed
+          bottom-4
+          left-4
+          right-4
+          z-50
+          rounded-2xl
+          border
+          border-white/10
+          bg-slate-900/90
+          backdrop-blur-xl
+          shadow-2xl
+          lg:hidden
+      "
+      >
+        <MobileBottomNav
+          onOpenCreatePost={() => setCreatePostOpen(true)}
+        />
+      </div>
+      
     </div>
   );
 }

@@ -1,37 +1,48 @@
+// ⚠️ MUST be the very first import — loads .env before any config module
+// (e.g. cloudinary.ts) reads process.env at import time.
+import "./config/env";
+
+import http from "http";
+import mongoose from "mongoose";
 import app from "./app";
 import { connectDB } from "./config/db";
-import {Server} from "socket.io";
-import http from "http";
+import { initSocket } from "./socket/socket";
 
 const PORT = process.env.PORT || 5000;
 
-const server = http.createServer(app);
-
-// Build socket.io CORS origins from CLIENT_URL (same source as Express CORS)
-const socketCorsOrigins = [
-  (process.env.CLIENT_URL || "").trim(),
-  "http://localhost:5173",
-].filter(Boolean);
-
-export const io = new Server(server, {
-  cors: {
-    origin: socketCorsOrigins,
-    credentials: true,
-  },
-});
-
-export default server;
-
 const startServer = async () => {
-  await connectDB();
+  try {
+    await connectDB();
 
-  // Boot Socket.IO after DB init (socket events will use in-memory presence for now)
-  const { initSocket } = await import("./socket/index");
-  initSocket(io);
+    const server = http.createServer(app);
 
-  server.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-  });
+    // Attach Socket.IO to the SAME http server.
+    initSocket(server);
+
+    server.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
+
+    // Graceful shutdown — close DB + server on Ctrl+C.
+    const shutdown = async (signal: string) => {
+      console.log(`\n${signal} received. Shutting down gracefully...`);
+      server.close(async () => {
+        try {
+          await mongoose.disconnect();
+        } catch {
+          // ignore
+        }
+        process.exit(0);
+      });
+    };
+
+    process.on("SIGINT", () => shutdown("SIGINT"));
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+  } catch (err) {
+    console.error("Failed to start server:", err);
+    process.exit(1);
+  }
 };
 
 startServer();
+

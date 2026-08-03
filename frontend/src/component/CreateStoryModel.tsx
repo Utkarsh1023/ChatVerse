@@ -6,25 +6,52 @@ import {
   HiOutlineXMark,
 } from "react-icons/hi2";
 import { useRef, useState } from "react";
-import type { Story } from "./StoryViewerModal";
+import { uploadStory } from "../api/story";
+import { useAuth } from "../context/AuthContext";
+
+const MAX_VIDEO_DURATION = 15; // story videos are capped at 15 seconds
+
 interface CreateStoryModalProps {
     open: boolean;
     onClose: () => void;
-    onUpload: (story: Story) => void;
+    /** Called after a successful upload — parent refreshes the grouped list. */
+    onUploaded: () => void | Promise<void>;
 }
 
 export default function CreateStoryModal({
   open,
   onClose,
-  onUpload,
+  onUploaded,
 }: CreateStoryModalProps) {
+  const { user } = useAuth();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const preview = file ? URL.createObjectURL(file) : "";
+  const avatarSrc = user?.avatar || "";
+  const displayName = user?.fullName || user?.name || "Your Story";
+
+  const handleUpload = async () => {
+    if (!file || uploading) return;
+
+    setUploading(true);
+    try {
+      await uploadStory(file, caption);
+      setFile(null);
+      setCaption("");
+      onClose();
+      await onUploaded();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to upload story");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -60,7 +87,8 @@ export default function CreateStoryModal({
 
               <button
                 onClick={onClose}
-                className="rounded-xl bg-white/5 p-2 text-slate-300 transition hover:bg-red-500 hover:text-white"
+                disabled={uploading}
+                className="rounded-xl bg-white/5 p-2 text-slate-300 transition hover:bg-red-500 hover:text-white disabled:opacity-50"
               >
                 <HiOutlineXMark size={22} />
               </button>
@@ -117,14 +145,15 @@ export default function CreateStoryModal({
                 <div className="flex items-center gap-4">
 
                   <img
-                    src="https://i.pravatar.cc/100"
-                    className="h-14 w-14 rounded-full"
+                    src={avatarSrc}
+                    alt={displayName}
+                    className="h-14 w-14 rounded-full object-cover"
                   />
 
                   <div>
 
                     <h3 className="font-semibold text-white">
-                      Utkarsh Anand
+                      {displayName}
                     </h3>
 
                     <p className="text-sm text-slate-400">
@@ -143,7 +172,8 @@ export default function CreateStoryModal({
                     onClick={() =>
                       imageInputRef.current?.click()
                     }
-                    className="flex items-center justify-center gap-2 rounded-2xl border border-violet-500/20 bg-violet-500/10 p-4 text-violet-300 transition hover:bg-violet-500 hover:text-white"
+                    disabled={uploading}
+                    className="flex items-center justify-center gap-2 rounded-2xl border border-violet-500/20 bg-violet-500/10 p-4 text-violet-300 transition hover:bg-violet-500 hover:text-white disabled:opacity-50"
                   >
                     <HiOutlinePhoto size={22} />
                     Photo
@@ -153,7 +183,8 @@ export default function CreateStoryModal({
                     onClick={() =>
                       videoInputRef.current?.click()
                     }
-                    className="flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-cyan-300 transition hover:bg-cyan-500 hover:text-white"
+                    disabled={uploading}
+                    className="flex items-center justify-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-cyan-300 transition hover:bg-cyan-500 hover:text-white disabled:opacity-50"
                   >
                     <HiOutlineVideoCamera size={22} />
                     Video
@@ -172,14 +203,33 @@ export default function CreateStoryModal({
                   }}
                 />
 
-                <input
+<input
                   hidden
                   type="file"
                   accept="video/*"
                   ref={videoInputRef}
                   onChange={(e) => {
-                    if (e.target.files?.[0])
-                      setFile(e.target.files[0]);
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    // Validate video duration ≤ 15 seconds.
+                    const video = document.createElement("video");
+                    video.preload = "metadata";
+                    video.onloadedmetadata = () => {
+                      URL.revokeObjectURL(video.src);
+                      if (video.duration > MAX_VIDEO_DURATION) {
+                        alert(
+                          `Video must be ${MAX_VIDEO_DURATION} seconds or less.`
+                        );
+                        e.target.value = "";
+                      } else {
+                        setFile(f);
+                      }
+                    };
+                    video.onerror = () => {
+                      // If we can't read metadata, allow the file anyway.
+                      setFile(f);
+                    };
+                    video.src = URL.createObjectURL(f);
                   }}
                 />
 
@@ -205,7 +255,8 @@ export default function CreateStoryModal({
                 {file && (
                   <button
                     onClick={() => setFile(null)}
-                    className="flex items-center gap-2 text-red-400 transition hover:text-red-300"
+                    disabled={uploading}
+                    className="flex items-center gap-2 text-red-400 transition hover:text-red-300 disabled:opacity-50"
                   >
                     <HiOutlineTrash />
                     Remove Media
@@ -218,32 +269,18 @@ export default function CreateStoryModal({
 
                   <button
                     onClick={onClose}
-                    className="rounded-xl bg-white/5 px-6 py-3 text-slate-300 transition hover:bg-white/10"
+                    disabled={uploading}
+                    className="rounded-xl bg-white/5 px-6 py-3 text-slate-300 transition hover:bg-white/10 disabled:opacity-50"
                   >
                     Cancel
                   </button>
 
                   <button
-                    onClick={() => {
-                      if (!file) return;
-
-                      onUpload({
-                        id: Date.now(),
-                        name: "Your Story",
-                        avatar: "https://i.pravatar.cc/150?img=12",
-                        isMine: true,
-                        media: preview,
-                        type: file.type.startsWith("image") ? "image" : "video",
-                        createdAt: "Just now",
-                      });
-
-                      setFile(null);
-                      setCaption("");
-                      onClose();
-                    }}
-                    className="rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 px-6 py-3 font-medium text-white transition hover:scale-105"
+                    onClick={handleUpload}
+                    disabled={!file || uploading}
+                    className="rounded-xl bg-gradient-to-r from-violet-600 to-cyan-500 px-6 py-3 font-medium text-white transition hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    Upload Story
+                    {uploading ? "Uploading..." : "Upload Story"}
                   </button>
 
                 </div>
@@ -258,3 +295,4 @@ export default function CreateStoryModal({
     </AnimatePresence>
   );
 }
+

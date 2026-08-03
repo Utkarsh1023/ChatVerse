@@ -65,7 +65,7 @@ export default function RightPanel() {
       <div className="h-screen overflow-y-auto hide-scrollbar p-2 space-y-4">
 
         {/* Profile */}
-        <Link to="/profile">
+        <Link to={`/dashboard/profile/${userName}`}>
         <motion.div
           whileHover={{ y: -2 }}
           className="rounded-3xl border border-white/10 bg-white/5 p-5"

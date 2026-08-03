@@ -2,20 +2,18 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import {
   HiMagnifyingGlass,
-  HiAdjustmentsHorizontal,
-  HiFunnel,
 } from "react-icons/hi2";
 
-const filters = [
-  "All",
-  "Online",
-  "Recently Added",
-  "Following",
-];
 
-export default function FriendsToolbar() {
-  const [activeFilter, setActiveFilter] = useState("All");
-  const [search, setSearch] = useState("");
+interface FriendsToolbarProps {
+  search: string;
+  setSearch: React.Dispatch<React.SetStateAction<string>>;
+}
+
+export default function FriendsToolbar({
+  search,
+  setSearch,
+}: FriendsToolbarProps) {
 
   return (
     <motion.section
@@ -25,7 +23,7 @@ export default function FriendsToolbar() {
         flex
         flex-col
         gap-5
-        rounded-3xl
+        rounded-2xl
         border
         border-white/10
         bg-white/[0.04]
@@ -46,7 +44,7 @@ export default function FriendsToolbar() {
             left-4
             top-1/2
             -translate-y-1/2
-            text-xl
+            text-2xl
             text-slate-500
           "
         />
@@ -55,7 +53,7 @@ export default function FriendsToolbar() {
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search friends..."
+          placeholder="Search by name or username..."
           className="
             w-full
             rounded-2xl
@@ -80,7 +78,7 @@ export default function FriendsToolbar() {
       
         {/* Sort */}
 
-        <motion.button
+        {/* <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: .95 }}
           className="
@@ -102,7 +100,7 @@ export default function FriendsToolbar() {
           <HiMagnifyingGlass />
 
           Search Friend
-        </motion.button>
+        </motion.button> */}
     
 
     </motion.section>

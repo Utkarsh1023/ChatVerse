@@ -1,31 +1,70 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
-export type NotificationType = "post" | "comment" | "like" | "share";
+export type NotificationType =
+  | "friend_request_received"
+  | "friend_request_accepted"
+  | "new_follower"
+  | "friend_removed"
+  | "friend_accepted"
+  | "system";
 
 export interface INotification extends Document {
-  receiver: mongoose.Types.ObjectId;
-  sender: mongoose.Types.ObjectId;
+  /** The user who receives the notification. */
+  user: Types.ObjectId;
+  /** The user who triggered the notification (actor). */
+  actor?: Types.ObjectId;
   type: NotificationType;
-  post?: mongoose.Types.ObjectId | null;
-  comment?: mongoose.Types.ObjectId | null;
+  message: string;
   read: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const notificationSchema = new Schema<INotification>(
   {
-    receiver: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    sender: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    type: { type: String, enum: ["post", "comment", "like", "share"], required: true },
-
-    post: { type: Schema.Types.ObjectId, ref: "Post", default: null, index: true },
-    comment: { type: Schema.Types.ObjectId, ref: "Comment", default: null, index: true },
-
-    read: { type: Boolean, default: false, index: true },
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+    actor: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    type: {
+      type: String,
+      enum: [
+        "friend_request_received",
+        "friend_request_accepted",
+        "new_follower",
+        "friend_removed",
+        "friend_accepted",
+        "system",
+      ],
+      default: "system",
+    },
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    read: {
+      type: Boolean,
+      default: false,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-notificationSchema.index({ receiver: 1, read: 1, createdAt: -1 });
+// Fast "latest activity" query per user.
+notificationSchema.index({ user: 1, createdAt: -1 });
 
-export default mongoose.models.Notification || mongoose.model<INotification>("Notification", notificationSchema);
+const Notification = mongoose.model<INotification>(
+  "Notification",
+  notificationSchema
+);
 
+export default Notification;

@@ -1,17 +1,11 @@
 import { Router } from "express";
-import { getProfile, updateProfile, updateProfileAvatar } from "../controllers/user.controller";
-import { protect } from "../middleware/auth.middleware";
-import { uploadAvatar } from "../middleware/upload.middleware";
+import { verifyToken } from "../middleware/verifyToken";
+import { searchUsers, getSuggestions } from "../controllers/user.controller";
 
 const router = Router();
 
-router.put("/profile", protect, updateProfile);
-router.get("/profile", protect, getProfile);
-router.post(
-  "/profile/avatar",
-  protect,
-  uploadAvatar.single("avatar"),
-  updateProfileAvatar
-);
+router.get("/search", verifyToken, searchUsers);
+
+router.get("/suggestions", verifyToken, getSuggestions);
 
 export default router;

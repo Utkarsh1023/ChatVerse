@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import * as authService from "../services/authService";
+import { setAccessToken, restoreAccessToken } from "../api/axios";
 
 interface User {
   id?: string;
@@ -21,8 +22,14 @@ interface User {
   country?: string;
   bio?: string;
   avatar?: string;
-}
+  coverImage?: string;
 
+  // social graph (populated by GET /api/profile/me)
+  friends?: Array<Record<string, unknown>> | string[];
+  followers?: Array<Record<string, unknown>> | string[];
+  following?: Array<Record<string, unknown>> | string[];
+  posts?: string[];
+}
 
 interface AuthContextType {
   user: User | null;
@@ -32,6 +39,8 @@ interface AuthContextType {
   register: typeof authService.register;
 
   logout: () => Promise<void>;
+  /** Merge partial profile updates into the authenticated user. */
+  updateUser: (updates: Partial<User>) => void;
 }
 
 const AuthContext = createContext<AuthContextType>(null!);
@@ -42,18 +51,26 @@ export const AuthProvider = ({
   children: ReactNode;
 }) => {
   const [user, setUser] = useState<User | null>(null);
-
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Restore the access token from localStorage BEFORE calling /auth/me
+    // so the request interceptor attaches the Bearer header.
+    restoreAccessToken();
     checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkUser = async () => {
     try {
       const res = await authService.getCurrentUser();
 
-      setUser(res.user);
+      // Normalize backend user shape (id vs _id).
+      const data = res.user as any;
+      setUser({
+        ...data,
+        id: data._id || data.id,
+      });
     } catch {
       setUser(null);
     } finally {
@@ -78,9 +95,17 @@ export const AuthProvider = ({
   };
 
   const logout = async () => {
-    await authService.logout();
+    try {
+      await authService.logout();
+    } finally {
+      setAccessToken(null);
+      setUser(null);
+    }
+  };
 
-    setUser(null);
+  /** Merge partial profile updates (e.g. a new coverImage) into the user. */
+  const updateUser = (updates: Partial<User>) => {
+    setUser((prev) => (prev ? { ...prev, ...updates } : prev));
   };
 
   return (
@@ -91,6 +116,7 @@ export const AuthProvider = ({
         login,
         register,
         logout,
+        updateUser,
       }}
     >
       {children}
@@ -99,3 +125,4 @@ export const AuthProvider = ({
 };
 
 export const useAuth = () => useContext(AuthContext);
+

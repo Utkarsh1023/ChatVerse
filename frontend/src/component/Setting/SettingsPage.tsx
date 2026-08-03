@@ -12,6 +12,8 @@ import DangerZone from "./DangerZone";
 import ContactSupport from "./ContactSupport";
 import { HiOutlineUser, HiOutlinePaintBrush, HiOutlineBell, HiOutlineShieldCheck, HiOutlineLockClosed, HiOutlineQuestionMarkCircle, HiOutlineExclamationTriangle, HiOutlineComputerDesktop, } from "react-icons/hi2";
 import { MdOutlineLogout  } from "react-icons/md";
+import MobileBottomNav from "../layouts/MobileBottomNav";
+
 type SettingTab =
   | "account"
   | "appearance"
@@ -88,7 +90,7 @@ export default function SettingsPage() {
   <div className="flex w-full items-center justify-between gap-4">
 
     {/* Left Side */}
-    <div className="flex min-w-0 items-center gap-4">
+    <div className="flex min-w-0 items-center gap-2">
 
       <Link
         to="/dashboard"
@@ -250,6 +252,7 @@ export default function SettingsPage() {
       </div>
 
     </div>
+    <MobileBottomNav />
   </div>
 );
 }

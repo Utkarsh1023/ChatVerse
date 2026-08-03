@@ -246,7 +246,7 @@ export default function AuthPage() {
                     : "text-slate-400 hover:text-white"
                 }`}
               >
-                SigIn
+                Sign In
               </motion.button>
 
               <motion.button

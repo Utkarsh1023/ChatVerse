@@ -3,7 +3,6 @@ import { useRef, useState } from "react";
 import { HiOutlinePhoto } from "react-icons/hi2";
 import { IoClose } from "react-icons/io5";
 import { MdOutlineSlowMotionVideo } from "react-icons/md";
-import API from "../api/axios";
 import { createPost } from "../api/postApi";
 interface Props {
   open: boolean;

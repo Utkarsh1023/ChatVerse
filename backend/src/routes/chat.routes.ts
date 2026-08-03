@@ -1,10 +1,24 @@
-import express from "express";
-import { protect } from "../middleware/auth.middleware";
-import { getMessages } from "../controllers/chat.controller";
+import { Router } from "express";
 
-const router = express.Router();
+import protect from "../middleware/auth.middleware";
 
-router.get("/messages/:receiverId", protect, getMessages);
+import {
+  getUsers,
+  getMessages,
+  getConversations,
+  sendMessage,
+} from "../controllers/chat.controller";
+
+const router = Router();
+
+router.use(protect);
+
+router.get("/users", getUsers);
+
+router.get("/conversations", getConversations);
+
+router.get("/messages/:receiverId", getMessages);
+
+router.post("/message", sendMessage);
 
 export default router;
-

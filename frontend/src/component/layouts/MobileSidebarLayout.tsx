@@ -13,6 +13,7 @@ type MobileSidebarLayoutProps = {
 export default function MobileSidebarLayout({ children }: MobileSidebarLayoutProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+    const user = { username: "" };
 
   const portalTarget = useMemo(() => {
     const el = document.getElementById("root");
@@ -61,7 +62,7 @@ export default function MobileSidebarLayout({ children }: MobileSidebarLayoutPro
           transition={{ type: "tween", duration: 0.25 }}
           className="fixed left-3 top-3 z-50 w-[280px] max-w-[80vw] lg:hidden"
         >
-          <Sidebar />
+          <Sidebar username={user.username} />
         </motion.aside>
       )}
     </AnimatePresence>

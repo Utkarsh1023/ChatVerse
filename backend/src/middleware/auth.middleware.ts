@@ -1,46 +1,86 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import User from "../models/User";
 
 export interface AuthRequest extends Request {
-  user?: any;
+  userId?: string;
 }
 
-export const protect = async (
-  req: AuthRequest,
+interface JwtPayload {
+  id: string;
+  email: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JwtPayload;
+    }
+  }
+}
+
+const verifyToken = (
+  req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const token = req.cookies.token;
+    let token: string | undefined;
+
+    if (req.headers.authorization?.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized",
+        message: "Access denied. No token provided.",
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      id: string;
-    };
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_ACCESS_SECRET!
+    ) as JwtPayload;
 
-    const user = await User.findById(decoded.id).select("-password");
+    req.user = decoded;
 
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
+    next();
+  } catch (err) {
+    console.log(err);
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired token.",
+    });
+  }
+};
 
-    req.user = user;
+export default verifyToken;
+
+
+
+export const protect = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  const header = req.headers.authorization;
+
+  if (!header?.startsWith("Bearer ")) {
+    return res.sendStatus(401);
+  }
+
+  const token = header.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_ACCESS_SECRET!
+    ) as any;
+
+    req.userId = decoded.id;
 
     next();
   } catch {
-    return res.status(401).json({
-      success: false,
-      message: "Unauthorized",
-    });
+    return res.sendStatus(401);
   }
 };

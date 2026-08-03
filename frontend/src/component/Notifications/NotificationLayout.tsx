@@ -3,16 +3,23 @@ import NotificationsHeader from "./NotificationsHeader";
 import NotificationStats from "./NotificationStats";
 import NotificationsList from "./NotificationsList";
 import RightNotificationPanel from "./RightNotificationPanel"
-
+import MobileBottomNav from "../layouts/MobileBottomNav";
+import CreatePostModal from "../CreatePostModel";
+import {useState} from "react";
 export default function NotificationsPage() {
-  return (
+    const user = { username: "" };
+  const [openCreatePost, setOpenCreatePost] = useState(false);
+  return (  
     <div className="min-h-screen bg-slate-950 p-2">
       <div className="mx-auto h-[calc(100vh-24px)] max-w-full overflow-hidden">
         <div className="flex h-full gap-2 overflow-hidden rounded-3xl bg-slate-900/70 backdrop-blur-xl">
 
           {/* Sidebar */}
           <div className="hidden lg:block shrink-0">
-            <Sidebar />
+            <Sidebar 
+              username={user.username}
+              onOpenCreatePost={() => setOpenCreatePost(true)}
+            />
           </div>
 
           {/* Main Content */}
@@ -50,6 +57,11 @@ export default function NotificationsPage() {
 
         </div>
       </div>
+      <MobileBottomNav onOpenCreatePost={() => setOpenCreatePost(true)} />
+        <CreatePostModal
+        open={openCreatePost}
+        onClose={() => setOpenCreatePost(false)}
+      />
     </div>
   );
 }

@@ -49,7 +49,23 @@ export const useSocket = () => {
     [socket]
   );
 
-  return { emitSendMessage, emitTyping, emitStopTyping, emitMessageDelivered, emitMessageSeen };
+const emitMessagesSeen = useCallback(
+    (data: { conversationId: string }) => {
+      if (!socket) return;
+      (socket as unknown as Socket<ClientToServerEvents, any>).emit("messagesSeen", data);
+    },
+    [socket]
+  );
+
+  const emitDeleteMessage = useCallback(
+    (data: { messageId: string; conversationId?: string }) => {
+      if (!socket) return;
+      (socket as unknown as Socket<ClientToServerEvents, any>).emit("deleteMessage", data);
+    },
+    [socket]
+  );
+
+  return { emitSendMessage, emitTyping, emitStopTyping, emitMessageDelivered, emitMessageSeen, emitMessagesSeen, emitDeleteMessage };
 
 };
 

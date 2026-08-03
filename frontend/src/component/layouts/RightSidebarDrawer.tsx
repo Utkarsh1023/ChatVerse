@@ -1,9 +1,10 @@
 import { motion, AnimatePresence } from "framer-motion";
 import React from "react";
 import {Link} from "react-router-dom";
+import type { User } from "../../types/user";
+import { useAuth } from "../../context/AuthContext";
 
 import {
-  HiOutlineBell,
   HiOutlinePhoto,
   HiOutlineUsers,
   HiOutlineStar,
@@ -18,6 +19,7 @@ import { BsChatSquareHeartFill } from "react-icons/bs";
 type Props = {
   open: boolean;
   onClose: () => void;
+  user?: User;
 };
 
 function SectionHeading({
@@ -29,6 +31,7 @@ function SectionHeading({
   title: string;
   right?: React.ReactNode;
 }) {
+  
   return (
     <div className="mb-4 flex items-center justify-between">
       <h3 className="flex items-center gap-2 text-white font-semibold">
@@ -40,7 +43,8 @@ function SectionHeading({
   );
 }
 
-export default function RightSidebarDrawer({ open, onClose }: Props) {
+export default function RightSidebarDrawer({ open, onClose, user, }: Props) {
+  
   return (
     <AnimatePresence>
   {open && (
@@ -81,7 +85,7 @@ export default function RightSidebarDrawer({ open, onClose }: Props) {
           lg:w-[360px]
         "
       >
-        <SidebarContent onClose={onClose} />
+        <SidebarContent onClose={onClose} user={user} />
       </motion.aside>
     </>
   )}
@@ -89,7 +93,13 @@ export default function RightSidebarDrawer({ open, onClose }: Props) {
   );
 }
 
-function SidebarContent({ onClose }: { onClose: () => void }) {
+function SidebarContent({ 
+  onClose, 
+  user 
+}: { 
+  onClose: () => void; 
+  user?: User;
+}) {
   return (
     <div className="h-full w-full flex flex-col">
       {/* Header / Profile */}
@@ -100,7 +110,7 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
           <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2">
             <motion.img
               whileHover={{ scale: 1.08 }}
-              src="https://i.pravatar.cc/200?img=12"
+              src={user?.avatar || "/default-avatar.png"}
               className="h-24 w-24 rounded-full border-4 border-slate-900 object-cover"
               alt="User"
             />
@@ -139,18 +149,30 @@ function SidebarContent({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="mt-16 mb-4 text-center px-6">
-          <h2 className="text-xl font-bold text-white">Prachi Dubey</h2>
-          <p className="text-slate-400">Full Stack Developer</p>
+          <h2 className="text-xl font-bold text-white">{user?.name}</h2>
+          <p className="text-slate-400">{user?.bio}</p>
 
           <div className="mt-4 flex justify-center gap-2">
-            <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs text-green-400">
-              Online
+            <span
+              className={`rounded-full px-3 py-1 text-xs ${
+                user?.isOnline
+                  ? "bg-green-500/20 text-green-400"
+                  : "bg-slate-500/20 text-slate-400"
+              }`}
+            >
+              {user?.isOnline ? "Online" : "Offline"}
             </span>
-            <Link to="/profile">
-            <span className="rounded-full bg-violet-500/20 px-3 py-1 text-sm text-violet-300">
-              View Profile
-            </span>
-            </Link>
+{user?.username ? (
+              <Link to={`/dashboard/profile/${user.username}`}>
+                <span className="rounded-full bg-violet-500/20 px-3 py-1 text-sm text-violet-300">
+                  View Profile
+                </span>
+              </Link>
+            ) : (
+              <span className="rounded-full bg-violet-500/20 px-3 py-1 text-sm text-violet-300">
+                View Profile
+              </span>
+            )}
           </div>
         </div>
       </div>

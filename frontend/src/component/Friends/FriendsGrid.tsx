@@ -5,94 +5,30 @@ import {
   HiOutlineFaceSmile,
 } from "react-icons/hi2";
 
+import { useMemo } from "react";
 import FriendCard from "./FriendCard";
+import { User } from "../../types/user";
 
-const friends = [
-  {
-    id: 1,
-    name: "Prachi Dubey",
-    username: "prachi",
-    avatar: "https://i.pravatar.cc/300?img=32",
-    bio: "Full Stack Developer | React | MERN",
-    location: "Ranchi",
-    mutual: 18,
-    online: true,
-  },
-  {
-    id: 2,
-    name: "Rahul Sharma",
-    username: "rahul",
-    avatar: "https://i.pravatar.cc/300?img=15",
-    bio: "Frontend Developer",
-    location: "Delhi",
-    mutual: 11,
-    online: false,
-  },
-  {
-    id: 3,
-    name: "Ananya Singh",
-    username: "ananya",
-    avatar: "https://i.pravatar.cc/300?img=25",
-    bio: "UI/UX Designer",
-    location: "Bangalore",
-    mutual: 8,
-    online: true,
-  },
-  {
-    id: 4,
-    name: "Aman Kumar",
-    username: "aman",
-    avatar: "https://i.pravatar.cc/300?img=52",
-    bio: "Software Engineer",
-    location: "Patna",
-    mutual: 16,
-    online: true,
-  },
-  {
-    id: 5,
-    name: "Riya Gupta",
-    username: "riya",
-    avatar: "https://i.pravatar.cc/300?img=47",
-    bio: "Flutter Developer",
-    location: "Noida",
-    mutual: 6,
-    online: false,
-  },
-  {
-    id: 6,
-    name: "Nikhil Raj",
-    username: "nikhil",
-    avatar: "https://i.pravatar.cc/300?img=11",
-    bio: "Backend Developer",
-    location: "Mumbai",
-    mutual: 13,
-    online: true,
-  },
-  {
-    id: 7,
-    name: "Sneha Verma",
-    username: "sneha",
-    avatar: "https://i.pravatar.cc/300?img=44",
-    bio: "Cloud Engineer",
-    location: "Pune",
-    mutual: 9,
-    online: false,
-  },
-  {
-    id: 8,
-    name: "Akash Patel",
-    username: "akash",
-    avatar: "https://i.pravatar.cc/300?img=67",
-    bio: "DevOps Engineer",
-    location: "Ahmedabad",
-    mutual: 21,
-    online: true,
-  },
-];
+interface FriendsGridProps {
+  friends: User[];
+  loading: boolean;
+  search: string;
+  setSearch: React.Dispatch<React.SetStateAction<string>>;
+}
 
-export default function FriendsGrid() {
-  const loading = false;
 
+export default function FriendsGrid({
+  friends,
+  loading,
+  search,
+  setSearch,
+}: FriendsGridProps) {
+  // Belt & suspenders: never render the logged-in user's card. The backend
+  // already excludes them, but this guards against stale payloads.
+  const visibleFriends = useMemo(
+    () => friends.filter((u) => u.relationship !== "self"),
+    [friends]
+  );
   return (
     <section className="space-y-6">
 
@@ -121,18 +57,19 @@ export default function FriendsGrid() {
           <div>
 
             <h2 className="text-2xl font-bold text-white">
-              Your Friends
+              {search ? "Search Results" : "Suggested Users"}
             </h2>
 
             <p className="mt-1 text-sm text-slate-400">
-              {friends.length} friends connected with you
+              {visibleFriends.length} {search ? "users found" : "suggestions"}
             </p>
 
           </div>
 
         </div>
-
+        {search && (
         <motion.button
+          onClick={() => setSearch("")}
           whileHover={{
             x: 4,
           }}
@@ -153,11 +90,11 @@ export default function FriendsGrid() {
           hover:text-white
         "
         >
-          View All
+          View Suggestions
 
           <HiOutlineArrowRight />
         </motion.button>
-
+        )}
       </div>
 
       {/* Loading */}
@@ -182,7 +119,7 @@ export default function FriendsGrid() {
 
       {/* Empty */}
 
-      {!loading && friends.length === 0 && (
+      {!loading && visibleFriends.length === 0 && (
 
         <motion.div
           initial={{
@@ -208,7 +145,7 @@ export default function FriendsGrid() {
           <HiOutlineFaceSmile className="text-6xl text-slate-500" />
 
           <h3 className="mt-6 text-2xl font-semibold text-white">
-            No Friends Yet
+            No Users Found
           </h3>
 
           <p className="mt-2 max-w-sm text-center text-slate-400">
@@ -237,25 +174,26 @@ export default function FriendsGrid() {
 
       {/* Grid */}
 
-      {!loading && friends.length > 0 && (
+      {!loading && visibleFriends.length > 0 && (
 
         <motion.div
           layout
           className="
           grid
           gap-6
-          sm:grid-cols-2
-          xl:grid-cols-3
-          2xl:grid-cols-4
+          grid-cols-1
+          md:grid-cols-2
+          xl:grid-cols-2
+          2xl:grid-cols-3
         "
         >
 
           <AnimatePresence>
 
-            {friends.map((friend, index) => (
+            {visibleFriends.map((friend, index) => (
 
               <motion.div
-                key={friend.id}
+                key={friend._id}
                 layout
                 initial={{
                   opacity: 0,
@@ -275,7 +213,8 @@ export default function FriendsGrid() {
               >
 
                 <FriendCard
-                  {...friend}
+                  user={friend}
+                  username={friend.username}
                 />
 
               </motion.div>

@@ -1,7 +1,7 @@
-import API from "./axios";
+import axios from "./axios";
 
 export const createPost = (formData: FormData) => {
-  return API.post("/posts", formData, {
+  return axios.post("/posts/create", formData, {
     headers: {
       "Content-Type": "multipart/form-data",
     },
@@ -9,7 +9,8 @@ export const createPost = (formData: FormData) => {
 };
 
 export const getPosts = () =>
-  API.get("/posts");
+  axios.get("/posts");
 
 export const toggleLike = (postId: string) =>
-  API.post(`/posts/${postId}/like`);
+  axios.post(`/posts/${postId}/like`);
+

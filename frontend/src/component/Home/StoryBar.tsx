@@ -1,21 +1,57 @@
+import type { StoryGroup } from "../../types/story";
 import { useAuth } from "../../context/AuthContext";
-import { motion } from "framer-motion";
-import { HiOutlinePlus } from "react-icons/hi2";
-import type { Story } from "../StoryViewerModal";
+import StoryCard from "./StoryCard";
 
 interface StoryBarProps {
-  stories: Story[];
+  /** Grouped stories — ONE entry per user. */
+  groups: StoryGroup[];
   onCreateStory: () => void;
-  onOpenStory: (story: Story) => void;
+  onOpenStory: (group: StoryGroup) => void;
 }
 
+/**
+ * Instagram-style story bar.
+ *
+ * Renders exactly ONE circle per user:
+ *
+ *   + Your Story   Alice   Bob   Charlie   David
+ *
+ * "Your Story" is always shown first (empty → large "+", else latest story
+ * thumbnail + small "+" overlay). There are never duplicate circles for the
+ * same user.
+ */
 export default function StoryBar({
-  stories,
+  groups,
   onCreateStory,
   onOpenStory,
 }: StoryBarProps) {
   const { user } = useAuth();
-  const avatarSrc = user?.avatar || "";
+
+  const ownUserId = user?.id || "";
+
+  // Build the "Your Story" placeholder group from the logged-in user.
+  const myGroup: StoryGroup = {
+    user: {
+      _id: ownUserId,
+      name: user?.fullName || user?.name || "Your Story",
+      username: user?.username,
+      avatar: user?.avatar || "",
+    },
+    stories: [],
+  };
+
+  const myStoryGroup = groups.find((g) => g.user._id === ownUserId) ?? null;
+
+  // The rest of the users' groups (never includes the logged-in user twice).
+  const otherGroups = groups.filter((g) => g.user._id !== ownUserId);
+
+  // A fake group used ONLY for the empty "Your Story" circle.
+  const placeholderGroup: StoryGroup = {
+    user: myGroup.user,
+    stories: [],
+  };
+
+  const hasMyStories = Boolean(myStoryGroup && myStoryGroup.stories.length > 0);
 
   return (
     <section className="mb-8">
@@ -24,107 +60,43 @@ export default function StoryBar({
           flex
           gap-4
           overflow-x-auto
-    md:overflow-visible
-    scrollbar-hide
-    pb-2
+          md:overflow-visible
+          scrollbar-hide
+          pb-2
         "
       >
-        {stories.map((story) => (
-          <motion.div
-            key={story.id}
-            whileHover={{ y: -6 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => {
-              if (story.isMine && !story.media) {
-                onCreateStory();
-              } else {
-                onOpenStory(story);
-              }
-            }}
-            className="flex min-w-[88px] shrink-0 cursor-pointer flex-col items-center md:shrink"
-          >
-            {/* Story Ring */}
-            <div
-              className="
-                relative
-                rounded-full
-                bg-gradient-to-tr
-                from-pink-500
-                via-violet-500
-                to-cyan-400
-                p-[3px]
-              "
-            >
-              <div className="rounded-full bg-slate-950 p-[3px]">
-                <img
-                  src={avatarSrc}
-                  alt={story.name}
-                  className="h-16 w-16 rounded-full object-cover"
-                />
-              </div>
+        {/* "Your Story" — always one circle */}
+        {hasMyStories && myStoryGroup ? (
+          <StoryCard
+            key={`mine-${ownUserId}`}
+            group={myStoryGroup}
+            isMine
+            onCreateStory={onCreateStory}
+            onOpenStory={onOpenStory}
+          />
+        ) : (
+          <StoryCard
+            key={`placeholder-${ownUserId || "me"}`}
+            group={placeholderGroup}
+            isMine
+            isPlaceholder
+            onCreateStory={onCreateStory}
+            onOpenStory={onOpenStory}
+          />
+        )}
 
-              {/* My Story */}
-              {story.isMine && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCreateStory();
-                  }}
-                  className="
-                    absolute
-                    -bottom-1
-                    -right-1
-                    flex
-                    h-6
-                    w-6
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-gradient-to-r
-                    from-violet-600
-                    to-cyan-500
-                    text-white
-                    shadow-lg
-                  "
-                >
-                  <HiOutlinePlus size={14} />
-                </button>
-              )}
-
-              {/* Online */}
-              {!story.isMine && (
-                <span
-                  className="
-                    absolute
-                    bottom-1
-                    right-1
-                    h-3
-                    w-3
-                    rounded-full
-                    border-2
-                    border-slate-950
-                    bg-green-500
-                  "
-                />
-              )}
-            </div>
-
-            <p
-              className="
-                mt-3
-                w-20
-                truncate
-                text-center
-                text-xs
-                font-medium
-                text-slate-300
-              "
-            >
-              {story.name}
-            </p>
-          </motion.div>
+        {/* One circle per other user */}
+        {otherGroups.map((group) => (
+          <StoryCard
+            key={group.user._id}
+            group={group}
+            isMine={false}
+            onCreateStory={onCreateStory}
+            onOpenStory={onOpenStory}
+          />
         ))}
       </div>
     </section>
   );
 }
+

@@ -1,22 +1,37 @@
-import mongoose, { Document, Schema, Types } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
 export interface IConversation extends Document {
-  participants: Types.ObjectId[];
-  lastMessage?: Types.ObjectId;
-  unreadCount: Record<string, number>; // userId -> unreadCount
-
-  updatedAt: Date;
-  createdAt: Date;
+  participants: mongoose.Types.ObjectId[];
+  lastMessage?: mongoose.Types.ObjectId;
+  lastMessageTime?: Date;
 }
 
-const conversationSchema = new Schema<IConversation>(
+const conversationSchema = new Schema(
   {
-    participants: [{ type: Schema.Types.ObjectId, ref: "User", required: true }],
-    lastMessage: { type: Schema.Types.ObjectId, ref: "Message", default: null },
-    unreadCount: { type: Map, of: Number, default: {} },
+    participants: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+    ],
+
+    lastMessage: {
+      type: Schema.Types.ObjectId,
+      ref: "Message",
+    },
+
+    lastMessageTime: {
+      type: Date,
+      default: Date.now,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-export default mongoose.model<IConversation>("Conversation", conversationSchema);
-
+export default mongoose.model<IConversation>(
+  "Conversation",
+  conversationSchema
+);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ChangeEvent, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { updateProfile, getProfile, updateProfileAvatar } from "../../api/axios";
 
@@ -11,12 +11,12 @@ import {
 } from "react-icons/hi2";
 
 type InputFieldProps = {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   name: string;
   value: string;
   type?: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
 };
 
 function InputField({
@@ -45,8 +45,10 @@ function InputField({
     </motion.div>
   );
 }
-
-export default function AccountSettings() {
+type AccountSettingsProps = {
+  onClose: () => void;
+};
+export default function AccountSettings({ onClose }: AccountSettingsProps) {
   const [form, setForm] = useState({
     fullName: "",
     username: "",
@@ -58,7 +60,7 @@ export default function AccountSettings() {
   });
   const [loading, setLoading] = useState(false);
   const [avatarLoading, setAvatarLoading] = useState(false);
-
+  
   useEffect(() => {
     const fetchProfile = async () => {
       try {
@@ -136,28 +138,21 @@ export default function AccountSettings() {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 25 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-slate-700 bg-slate-800 p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-fuchsia-500/30 hover:bg-slate-900 hover:shadow-[0_0_20px_rgba(168,85,247,.15)]">
-      {/* Background Glow */}
-      <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-fuchsia-500/10 blur-3xl" />
-      <div className="absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
-
+    
       <div className="relative z-10">
         {/* Header */}
-        <div className="mb-10">
+        <div className="mb-6">
           <h2 className="text-3xl font-bold text-white">
             Update Profile
           </h2>
 
-          <p className="mt-2 text-slate-400">
+          <p className="mt-1 text-slate-400">
             Update your personal information and profile.
           </p>
         </div>
 
         {/* Profile Card */}
-        <div className="mb-8 rounded-3xl border border-white/10 bg-slate-900/60 p-8">
+        <div className="mb-4 rounded-3xl border border-white/10 bg-slate-900/60 p-8">
           <div className="flex flex-col gap-8 lg:flex-row">
 
             {/* Profile Image */}
@@ -206,7 +201,7 @@ export default function AccountSettings() {
               </motion.div>
 
               <button
-                className="mt-4 text-sm font-medium text-fuchsia-400 hover:text-fuchsia-300"
+                className="mt-2 text-sm font-medium text-fuchsia-400 hover:text-fuchsia-300"
                 disabled={avatarLoading}
               >
                 {avatarLoading ? "Uploading..." : "Change Photo"}
@@ -273,7 +268,7 @@ export default function AccountSettings() {
                   className="w-full resize-none rounded-2xl border border-slate-700 bg-slate-800/80 px-5 py-4 text-white outline-none transition-all duration-300 hover:border-slate-500 focus:border-fuchsia-500 focus:ring-4 focus:ring-fuchsia-500/20"
                 />
               </div>
-              <div className="mt-6 flex w-full items-center justify-center gap-3">
+              <div className="mt-4 flex w-full items-center justify-center gap-3">
                 <motion.button
                   whileHover={{
                     scale: 1.03,
@@ -308,32 +303,34 @@ export default function AccountSettings() {
                 </motion.button>
 
                 <motion.button
+                 onClick={onClose}
                   whileHover={{
                     scale: 1.03,
                     boxShadow: "0 0 20px rgba(71,85,105,.35)",
                   }}
                   whileTap={{ scale: 0.98 }}
+                  
                   className="
-      flex-1
-      rounded-2xl
-      border
-      border-slate-700
-      bg-slate-800
-      px-4
-      py-3
-      text-sm
-      font-semibold
-      text-slate-300
-      transition-all
-      duration-300
-      hover:border-slate-600
-      hover:bg-slate-700
-      hover:text-white
-      sm:flex-none
-      sm:px-8
-      sm:text-base
+                    flex-1
+                    rounded-2xl
+                    border
+                    border-slate-700
+                    bg-slate-800
+                    px-4
+                    py-3
+                    text-sm
+                    font-semibold
+                    text-slate-300
+                    transition-all
+                    duration-300
+                    hover:border-slate-600
+                    hover:bg-slate-700
+                    hover:text-white
+                    sm:flex-none
+                    sm:px-8
+                    sm:text-base
     "
-                >
+                  >
                   Cancel
                 </motion.button>
               </div>
@@ -343,6 +340,5 @@ export default function AccountSettings() {
           </div>
         </div>
       </div>
-    </motion.div>
   );
 }

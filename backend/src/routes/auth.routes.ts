@@ -1,29 +1,33 @@
 import { Router } from "express";
-
 import {
   register,
   login,
   logout,
-  me,
+  refresh,
+  getCurrentUser,
   getSocketToken,
 } from "../controllers/auth.controller";
-
-
 import { protect } from "../middleware/auth.middleware";
+import {
+  registerSchema,
+  loginSchema,
+} from "../validators/auth.validator";
+import { validate } from "../middleware/validate";
 
 const router = Router();
 
-// Public Routes
-router.post("/register", register);
-router.post("/login", login);
+router.post("/register", validate(registerSchema), register);
 
-// Protected Route
-router.get("/me", protect, me);
+router.post("/login", validate(loginSchema), login);
 
-// Logout
 router.post("/logout", logout);
 
-// Socket token endpoint — returns a JWT for socket.io auth
+router.post("/refresh", refresh);
+
+router.get("/me", protect, getCurrentUser);
+
+// Socket.IO handshake token — requires an authenticated request.
 router.get("/socket-token", protect, getSocketToken);
 
 export default router;
+

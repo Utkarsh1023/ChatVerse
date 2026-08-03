@@ -53,6 +53,9 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     s.on("connect", () => {
         console.log("Connected", s.id);
         s.emit("userOnline", user.id);
+        // Join the user's personal room so the server can target real-time
+        // friend-request events to this user (user:{id}).
+        s.emit("join");
     });
 
     return () => {

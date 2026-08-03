@@ -1,58 +1,123 @@
-import { Response } from "express";
+import { Request, Response } from "express";
+import mongoose from "mongoose";
+
+import User from "../models/User";
+import Conversation from "../models/Conversation";
 import Message from "../models/Message";
-import { getOrCreateConversation } from "../services/conversation.service";
-import { AuthRequest } from "../middleware/auth.middleware";
 
-export const getMessages = async (req: AuthRequest, res: Response) => {
-  try {
-    // req.params values can be string | string[] depending on routing; normalize to string
-    let { receiverId } = req.params as { receiverId?: string | string[] };
-    if (Array.isArray(receiverId)) receiverId = receiverId[0];
-    const senderId = req.user!._id.toString();
+export const getUsers = async (
+  req: any,
+  res: Response
+) => {
+  const users = await User.find({
+    _id: { $ne: req.userId },
+  }).select("-password");
 
-    if (!receiverId) {
-      return res.status(400).json({
-        success: false,
-        message: "Receiver ID is required",
-      });
-    }
-
-    // Get or create the conversation between the two users
-    const conversation = await getOrCreateConversation(senderId, receiverId);
-
-    // Fetch all messages for this conversation, sorted by createdAt ascending
-    const messages = await Message.find({
-      conversation: conversation._id,
-      deleted: false,
-    })
-      .sort({ createdAt: 1 })
-      .lean();
-
-    // Map to frontend-friendly format
-    const formattedMessages = messages.map((msg) => ({
-      id: msg._id.toString(),
-      conversationId: msg.conversation.toString(),
-      senderId: msg.sender.toString(),
-      receiverId: msg.receiver.toString(),
-      text: msg.text,
-      attachments: msg.attachments,
-      status: msg.status,
-      edited: msg.edited,
-      deleted: msg.deleted,
-      createdAt: msg.createdAt.toISOString(),
-    }));
-
-    return res.status(200).json({
-      success: true,
-      messages: formattedMessages,
-      conversationId: conversation._id.toString(),
-    });
-  } catch (err) {
-    console.error("Error fetching messages:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Unable to fetch messages",
-    });
-  }
+  res.json(users);
 };
 
+export const getMessages = async (
+  req: any,
+  res: Response
+) => {
+  const senderId = req.userId;
+
+  const receiverId = req.params.receiverId;
+
+  let conversation =
+    await Conversation.findOne({
+      participants: {
+        $all: [senderId, receiverId],
+      },
+    });
+
+  if (!conversation)
+    return res.json({
+      messages: [],
+    });
+
+  const messages =
+    await Message.find({
+      conversationId: conversation._id,
+    }).sort({
+      createdAt: 1,
+    });
+
+  res.json({
+    messages,
+  });
+};
+
+export const sendMessage = async (
+  req: any,
+  res: Response
+) => {
+  const senderId = req.userId;
+
+  const { receiverId, text } = req.body;
+
+  let conversation =
+    await Conversation.findOne({
+      participants: {
+        $all: [senderId, receiverId],
+      },
+    });
+
+  if (!conversation) {
+    conversation =
+      await Conversation.create({
+        participants: [
+          senderId,
+          receiverId,
+        ],
+      });
+  }
+
+  const message =
+    await Message.create({
+      conversationId:
+        conversation._id,
+      senderId,
+      receiverId,
+      text,
+    });
+
+  conversation.lastMessage =
+    message._id as mongoose.Types.ObjectId;
+
+  await conversation.save();
+
+  res.status(201).json(message);
+};
+
+export const getConversations =
+  async (req: any, res: Response) => {
+    const userId = req.userId;
+
+    const conversations =
+      await Conversation.find({
+        participants: userId,
+      })
+        .populate(
+          "participants",
+          "name username avatar isOnline lastSeen isVerified"
+        )
+        .populate("lastMessage")
+        .sort({
+          updatedAt: -1,
+        });
+
+    const result = conversations.map(
+      (c: any) => ({
+        _id: c._id,
+        updatedAt: c.updatedAt,
+        lastMessage: c.lastMessage,
+        user: c.participants.find(
+          (p: any) =>
+            p._id.toString() !== userId
+        ),
+      })
+    );
+
+    res.json(result);
+  };

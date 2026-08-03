@@ -1,77 +1,85 @@
 import { Request, Response } from "express";
 import User from "../models/User";
-import generateToken from "../utils/generateToken";
+import { asyncHandler } from "../utils/asyncHandler";
+import jwt from "jsonwebtoken";
+import { AuthRequest } from "../middleware/auth.middleware";
+import { refreshCookieOptions } from "../utils/cookieOptions";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+} from "../utils/jwt";
 
-export const register = async (req: Request, res: Response) => {
-  try {
+export const register = asyncHandler(
+  async (req: Request, res: Response) => {
     const { name, username, email, password } = req.body;
 
-    if (!name || !username || !email || !password) {
-      return res.status(400).json({
+    // Normalize BEFORE querying DB so we never miss a duplicate
+    // (schema stores email/username as lowercase).
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedUsername = username.trim().toLowerCase();
+
+    const existingUser = await User.findOne({
+      $or: [{ email: normalizedEmail }, { username: normalizedUsername }],
+    });
+
+    if (existingUser) {
+      return res.status(409).json({
         success: false,
-        message: "All fields are required",
+        message: "User already exists",
       });
     }
 
-    const emailExists = await User.findOne({ email });
-
-    if (emailExists) {
-      return res.status(400).json({
-        success: false,
-        message: "Email already exists",
-      });
-    }
-
-    const usernameExists = await User.findOne({ username });
-
-    if (usernameExists) {
-      return res.status(400).json({
-        success: false,
-        message: "Username already exists",
-      });
-    }
-
-    const user = await User.create({
-      name,
-      username,
-      email,
+const user = await User.create({
+      name: name.trim(),
+      username: normalizedUsername,
+      email: normalizedEmail,
       password,
     });
 
-    const token = generateToken(user._id.toString());
+    const accessToken = generateAccessToken(user._id.toString());
+    const refreshToken = generateRefreshToken(user._id.toString());
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    user.refreshToken = refreshToken;
+    await user.save();
 
-    return res.status(201).json({
+    res.cookie(
+      "refreshToken",
+      refreshToken,
+      refreshCookieOptions
+    );
+
+    res.status(201).json({
       success: true,
+      accessToken,
       user: {
         id: user._id,
         name: user.name,
+        fullName: user.name,
         username: user.username,
         email: user.email,
+        avatar: user.avatar,
+        bio: user.bio ?? "",
+        country: user.country ?? "",
+        coverImage: user.coverImage ?? "",
       },
     });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
   }
-};
+);
 
-export const login = async (req: Request, res: Response) => {
-  try {
+export const login = asyncHandler(
+  async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email });
+    // Support login with email OR username.
+    const normalized = email.trim().toLowerCase();
+
+    // password is select:false in the schema — must explicitly select it.
+    const user = await User.findOne({
+      $or: [{ email: normalized }, { username: normalized }],
+    }).select("+password");
 
     if (!user) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
         message: "Invalid credentials",
       });
@@ -80,116 +88,132 @@ export const login = async (req: Request, res: Response) => {
     const isMatch = await user.comparePassword(password);
 
     if (!isMatch) {
-      return res.status(400).json({
+      return res.status(401).json({
         success: false,
         message: "Invalid credentials",
       });
     }
 
-    const token = generateToken(user._id.toString());
+    const accessToken = generateAccessToken(user._id.toString());
+    const refreshToken = generateRefreshToken(user._id.toString());
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      secure: process.env.NODE_ENV === "production" ? true : false,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    user.refreshToken = refreshToken;
+    await user.save();
 
-    return res.json({
+    res.cookie(
+      "refreshToken",
+      refreshToken,
+      refreshCookieOptions
+    );
+
+    res.json({
       success: true,
+      accessToken,
       user: {
         id: user._id,
         name: user.name,
+        fullName: user.name,
         username: user.username,
         email: user.email,
+        avatar: user.avatar,
+        bio: user.bio ?? "",
+        country: user.country ?? "",
+        coverImage: user.coverImage ?? "",
       },
     });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
   }
-};
+);
 
-export const logout = (req: Request, res: Response) => {
-  res.clearCookie("token");
+export const logout = asyncHandler(
+  async (req: Request, res: Response) => {
+    const token = req.cookies.refreshToken;
 
-  res.status(200).json({
-    success: true,
-    message: "Logged out successfully",
-  });
-};
-
-// Socket.IO token endpoint — returns a JWT that the client can use for socket auth
-// The client reads this token from the response and passes it via socket handshake
-export const getSocketToken = async (req: Request, res: Response) => {
-  try {
-    const tokenUser = (req as any).user;
-    const userId: string | undefined =
-      tokenUser?._id?.toString?.() ?? tokenUser?.id;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
+    if (token) {
+      await User.findOneAndUpdate(
+        { refreshToken: token },
+        { refreshToken: "" }
+      );
     }
 
-    const token = generateToken(userId);
+    res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+    });
 
-    return res.json({
+    res.json({
       success: true,
-      token,
-    });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
+      message: "Logged out successfully",
     });
   }
-};
+);
 
-export const me = async (req: Request, res: Response) => {
-  try {
-    const tokenUser = (req as any).user;
-    const userId: string | undefined =
-      tokenUser?._id?.toString?.() ?? tokenUser?.id;
+export const refresh = asyncHandler(
+  async (req: Request, res: Response) => {
+    const token = req.cookies.refreshToken;
 
-    if (!userId) {
+    if (!token) {
+      return res.sendStatus(401);
+    }
+
+    let decoded: any;
+    try {
+      decoded = jwt.verify(
+        token,
+        process.env.JWT_REFRESH_SECRET!
+      );
+    } catch {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized",
+        message: "Invalid or expired refresh token",
       });
     }
 
-    const user = await User.findById(userId).select("-password");
+    // refreshToken is select:false in the schema — explicitly select it.
+    const user = await User.findById(decoded.id).select("+refreshToken");
+
+    if (!user || user.refreshToken !== token) {
+      return res.status(403).json({
+        success: false,
+        message: "Refresh token mismatch",
+      });
+    }
+
+    const accessToken = generateAccessToken(user._id.toString());
+
+    res.json({
+      success: true,
+      accessToken,
+    });
+  }
+);
+
+export const getCurrentUser = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const user = await User.findById(req.userId).select(
+      "-password -refreshToken"
+    );
 
     if (!user) {
-      return res.status(401).json({
+      return res.status(404).json({
         success: false,
-        message: "Unauthorized",
+        message: "User not found",
       });
     }
 
-    return res.json({
+    res.json({
       success: true,
-      user: {
-        // keep profile fields consistent with /users/profile
-        id: user._id,
-        fullName: (user as any).fullName ?? user.name,
-        username: user.username,
-        email: user.email,
-        phone: (user as any).phone,
-        country: (user as any).country,
-        bio: (user as any).bio,
-        avatar: (user as any).avatar,
-      },
-    });
-  } catch (err) {
-    return res.status(500).json({
-      success: false,
-      message: "Server Error",
+      user,
     });
   }
-};
+);
+
+// Issues a short-lived access token for Socket.IO handshake auth
+// (JWT lives in an httpOnly cookie which the frontend cannot read).
+export const getSocketToken = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const token = generateAccessToken(req.userId!);
+    res.json({ success: true, token });
+  }
+);
+

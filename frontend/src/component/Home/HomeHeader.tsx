@@ -167,7 +167,7 @@ export default function HomeHeader({
           </Link>
 
           {/* Avatar */}
-          <Link to="/profile">
+          <Link to={`/dashboard/profile/${user?.username || ""}`}>
           <motion.img
             whileHover={{ scale: 1.08 }}
             src={avatarSrc}

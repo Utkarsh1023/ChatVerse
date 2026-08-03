@@ -127,12 +127,10 @@ export default function CommentsModal({
                     <div className="flex-1">
                       <div className="rounded-2xl bg-white/5 p-4">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-white">
-                            {comment.user?.fullName || "Unknown User"}
-                          </h4>
+                          
 
                           <span className="text-sm text-slate-500">
-                            @{comment.user?.username || "unknown"}
+                            {comment.user?.username || "unknown"}
                           </span>
 
                           <span className="text-xs text-slate-600">
