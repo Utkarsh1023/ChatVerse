@@ -9,8 +9,8 @@ import {
   getFriendsDashboard,
   parsePagination,
   removeFriend,
-  createNotification,
 } from "../services/friends.service";
+import { createNotification } from "../services/notification.service";
 import { getIO } from "../socket/socket";
 
 /**
@@ -109,12 +109,11 @@ export const acceptRequest = asyncHandler(
     );
 
     // Activity + notification for the sender ("X accepted your request").
-    await createNotification(
-      String(sender._id),
-      String(me._id),
-      "friend_request_accepted",
-      `${me.name} accepted your friend request`
-    );
+    await createNotification({
+  recipient: sender._id,
+  sender: me._id,
+  type: "friend_accept",
+});
 
     const io = getIO();
     if (io) {

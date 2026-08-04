@@ -13,6 +13,7 @@ export type NotificationType =
   | "comment_post"
   | "reply_comment"
   | "follow"
+  | "friend_removed"
   | "friend_request"
   | "friend_accept"
   | "mention"
