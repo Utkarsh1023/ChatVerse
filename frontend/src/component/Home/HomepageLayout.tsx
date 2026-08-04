@@ -24,6 +24,8 @@ export default function HomePage() {
   const [posts, setPosts] = useState([]);
   const [postsError, setPostsError] = useState<string | null>(null);
   const [postsLoading, setPostsLoading] = useState(true);
+  const [createPostOpen, setCreatePostOpen] = useState(false);
+
   const fetchPosts = async () => {
     setPostsLoading(true);
     setPostsError(null);
@@ -77,6 +79,7 @@ export default function HomePage() {
   const handleStoryDeleted = async () => {
     await fetchStories();
   };
+  const [searchOpen, setSearchOpen] = useState(false);
 
   return (
     <>
@@ -146,8 +149,9 @@ export default function HomePage() {
   "
 >
   <MobileBottomNav
-    onOpenCreatePost={() => setOpenPost(true)}
-  />
+  onOpenSearch={() => setOpenSearch(true)}
+  onOpenCreatePost={() => setCreatePostOpen(true)}
+/>
 </div>
       </div>
 

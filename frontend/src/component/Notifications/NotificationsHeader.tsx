@@ -44,48 +44,11 @@ export default function NotificationsHeader() {
             Notifications
           </motion.h1>
 
-          <p className="mt-2 text-sm text-slate-400">
-            Stay updated with likes, comments and friend requests.
-          </p>
           </div>
         </div>
 
         {/* Right */}
         <div className="flex items-center gap-4">
-
-          {/* Search */}
-          {/* <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="
-              hidden
-              lg:flex
-              w-[340px]
-              items-center
-              gap-3
-              rounded-2xl
-              border
-              border-white/10
-              bg-white/5
-              px-4
-              py-3
-              transition
-              hover:border-violet-500/40
-            "
-          >
-            <HiOutlineMagnifyingGlass className="text-xl text-slate-400" />
-
-            <input
-              type="text"
-              placeholder="Search notifications..."
-              className="
-                w-full
-                bg-transparent
-                text-white
-                outline-none
-                placeholder:text-slate-500
-              "
-            />
-          </motion.div> */}
 
           {/* Mark All Read */}
           <motion.button
@@ -120,25 +83,6 @@ export default function NotificationsHeader() {
 
         </div>
       </div>
-
-      {/* Notification Summary */}
-      <div className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-5">
-  <div className="flex items-center justify-between">
-    <div>
-      <h2 className="font-semibold text-white">
-        Friend Requests
-      </h2>
-
-      <p className="text-sm text-slate-400">
-        3 pending requests
-      </p>
-    </div>
-
-    <button className="text-sky-400 hover:text-sky-300">
-      View All
-    </button>
-  </div>
-</div>
     </header>
   );
 }

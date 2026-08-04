@@ -83,6 +83,7 @@ export interface PopulatedNotification {
   } | null;
   type: NotificationType;
   read: boolean;
+  status?: "pending" | "accepted" | "declined";
   post?: {
     _id: Types.ObjectId;
     media?: { url?: string }[];
@@ -107,4 +108,3 @@ export interface PopulatedNotification {
   createdAt: Date;
   updatedAt: Date;
 }
-

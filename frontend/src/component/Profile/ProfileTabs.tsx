@@ -19,7 +19,11 @@ import {
   FiLoader,
 } from "react-icons/fi";
 
-type TabId = "posts" | "friends" | "followers" | "following";
+type TabId = 
+       "posts" 
+      | "friends"
+      // | "followers"
+      // | "following";
 
 export default function ProfileTabs() {
   const [activeTab, setActiveTab] = useState<TabId>("posts");
@@ -64,8 +68,8 @@ export default function ProfileTabs() {
   const tabs = [
     { id: "posts" as TabId, label: "Posts", icon: FiGrid, count: posts.length },
     { id: "friends" as TabId, label: "Friends", icon: FiUsers, count: friends.length },
-    { id: "followers" as TabId, label: "Followers", icon: FiHeart, count: followers.length },
-    { id: "following" as TabId, label: "Following", icon: FiUserPlus, count: following.length },
+    // { id: "followers" as TabId, label: "Followers", icon: FiHeart, count: followers.length },
+    // { id: "following" as TabId, label: "Following", icon: FiUserPlus, count: following.length },
   ];
 
   useEffect(() => {
@@ -92,19 +96,19 @@ switch (activeTab) {
           break;
         }
 
-        case "followers": {
-          const data = await getFollowers(username);
-          console.log(`[ProfileTabs] followers resolved =>`, data);
-          setFollowers(data ?? []);
-          break;
-        }
+        // case "followers": {
+        //   const data = await getFollowers(username);
+        //   console.log(`[ProfileTabs] followers resolved =>`, data);
+        //   setFollowers(data ?? []);
+        //   break;
+        // }
 
-        case "following": {
-          const data = await getFollowing(username);
-          console.log(`[ProfileTabs] following resolved =>`, data);
-          setFollowing(data ?? []);
-          break;
-        }
+        // case "following": {
+        //   const data = await getFollowing(username);
+        //   console.log(`[ProfileTabs] following resolved =>`, data);
+        //   setFollowing(data ?? []);
+        //   break;
+        // }
       }
     } catch (err: any) {
       console.error(err);
@@ -123,7 +127,7 @@ switch (activeTab) {
     <div className="mt-1 space-y-1">
       {/* Tabs */}
       <div className="rounded-3xl border border-slate-700 bg-[#0F172A] p-2 shadow-[0_0_30px_rgba(168,85,247,.12)]">
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-2">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -209,7 +213,7 @@ switch (activeTab) {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            className="grid gap-6 md:grid-cols-2 xl:grid-cols-3"
+            className="grid gap-6 md:grid-cols-2 xl:grid-cols-4"
           >
             {posts.length === 0 ? (
               <p className="col-span-full py-10 text-center text-slate-400">
@@ -269,7 +273,7 @@ switch (activeTab) {
         )}
 
         {/* Followers tab */}
-        {!loading && !error && activeTab === "followers" && (
+        {/* {!loading && !error && activeTab === "followers" && (
           <motion.div
             key="followers"
             initial={{ opacity: 0, y: 15 }}
@@ -292,10 +296,10 @@ className="grid gap-6 md:grid-cols-2 xl:grid-cols-4"
               ))
             )}
           </motion.div>
-        )}
+        )} */}
 
         {/* Following tab */}
-        {!loading && !error && activeTab === "following" && (
+        {/* {!loading && !error && activeTab === "following" && (
           <motion.div
             key="following"
             initial={{ opacity: 0, y: 15 }}
@@ -318,7 +322,7 @@ className="grid gap-6 md:grid-cols-2 xl:grid-cols-4"
               ))
             )}
           </motion.div>
-        )}
+        )} */}
       </AnimatePresence>
     </div>
   );

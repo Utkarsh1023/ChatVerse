@@ -1,26 +1,21 @@
-# Notification System — Implementation Checklist
+# Task: Professional Post-Action Friend Request Notification Experience
 
-## Backend — New Notification Module
-- [x] 1. `src/types/notification.ts` — notification type unions + interfaces
-- [ ] 2. `src/models/Notification.ts` — structured schema + indexes (rewrite)
-- [ ] 3. `src/services/notification.service.ts` — business logic (create/delete/mark/read/get/count)
-- [ ] 4. `src/validators/notification.validator.ts` — express-validator chains
-- [ ] 5. `src/controllers/notification.controller.ts` — thin REST controllers
-- [ ] 6. `src/routes/notification.routes.ts` — 5 endpoints under `protect`
-- [ ] 7. `src/socket/notification.socket.ts` — socket emit helpers
-- [ ] 8. `src/app.ts` — mount `/api/notifications`
+## Backend
+- [x] Add `status` field (`"pending" | "accepted" | "declined"`) to `Notification` model
+- [x] Add `status` to `PopulatedNotification` type
+- [x] Add `updateNotificationStatus` service to update the pending friend-request notification and emit `notification:updated`
+- [x] Add `emitNotificationUpdated` socket helper (emits `notification:updated`)
+- [x] Update `friend.controller.ts` accept/reject to update notification status + emit `friend:accepted` / `friend:declined`
+- [x] Update `friends.controller.ts` accept/reject for consistency
+- [x] Verify backend compiles (no TypeScript errors)
 
-## Backend — Migrate existing shared helper
-- [x] 9. `src/services/friend.service.ts` — new structured `createNotification`
-- [x] 10. `src/controllers/friend.controller.ts` — new structured `createNotification`
-- [ ] 11. `src/services/friends.service.ts` — remove local helper, import from notification.service, fix `getRecentActivity` + `removeFriend`
-- [ ] 12. `src/services/connections.service.ts` — `followUser` → structured `follow`
-
-## Backend — Auto-notification integration points
-- [ ] 13. `src/controllers/post.controller.ts` — `toggleLike` → `like_post`
-- [ ] 14. `src/controllers/comment.controller.ts` — `createComment` → `comment_post`
-- [ ] 15. `src/controllers/story.controller.ts` — `story_like` / `story_reply` examples
-- [ ] 16. `src/controllers/message.controller.ts` / `chat.controller.ts` — `message_reaction` / call examples
-
-## Verification
-- [ ] 17. `cd backend && npx tsc --noEmit` — no type errors
+## Frontend
+- [x] Add `notification:updated`, `friend:accepted`, `friend:declined` to `socketTypes.ts`
+- [x] Rewrite `NotificationItem.tsx`:
+  - Render based on `status` (pending → Accept/Decline buttons; accepted → green success message; declined → gray message)
+  - Loading spinner during request, disabled buttons, framer-motion fade in/out animations
+- [x] Rewrite `NotificationsList.tsx`:
+  - Add `notification:updated` listener that updates only the affected notification
+  - `onRequestAction` now updates status locally instead of removing the notification
+  - Pass `status` to `NotificationItem`
+- [x] Verify frontend builds successfully (vite build)

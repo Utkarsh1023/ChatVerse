@@ -5,6 +5,7 @@ import Post from "../models/Post";
 import { asyncHandler } from "../utils/asyncHandler";
 import ApiError from "../utils/ApiError";
 import { AuthRequest } from "../middleware/verifyToken";
+import { createNotification } from "../services/notification.service";
 
 // Fields of the user we expose on each comment. `name` is mapped to
 // `fullName` by the User model's virtual, which the frontend reads.
@@ -44,10 +45,20 @@ export const createComment = asyncHandler(
       text: content,
     });
 
-    // Keep the post's denormalized `comments` array + `commentsCount` in sync.
+// Keep the post's denormalized `comments` array + `commentsCount` in sync.
     await Post.findByIdAndUpdate(postId, {
       $push: { comments: comment._id },
       $inc: { commentsCount: 1 },
+    });
+
+    // 🔔 Notify the post author when someone comments on their post.
+    // createNotification already skips self-notifications (commenter === author).
+    await createNotification({
+      recipient: post.author,
+      sender: userId,
+      type: "comment_post",
+      post: postId,
+      comment: comment._id,
     });
 
     await comment.populate("user", USER_SELECT);

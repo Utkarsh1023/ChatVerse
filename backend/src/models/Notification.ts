@@ -16,6 +16,8 @@ export interface INotification extends Document {
   message?: Types.ObjectId;
   conversation?: Types.ObjectId;
   read: boolean;
+  /** Action status for actionable notifications (e.g. friend_request). */
+  status: "pending" | "accepted" | "declined";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,6 +69,11 @@ const notificationSchema = new Schema<INotification>(
       type: Boolean,
       default: false,
     },
+    status: {
+      type: String,
+      enum: ["pending", "accepted", "declined"],
+      default: "pending",
+    },
   },
   {
     timestamps: true,
@@ -93,4 +100,3 @@ const Notification = mongoose.model<INotification>(
 );
 
 export default Notification;
-

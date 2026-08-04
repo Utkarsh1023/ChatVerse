@@ -7,7 +7,9 @@ import {
   HiOutlineEllipsisHorizontal,
   HiOutlineTrash,
   HiOutlinePlay,
+  HiHeart,
 } from "react-icons/hi2";
+import { toast } from "react-toastify";
 import type { StoryGroup } from "../types/story";
 import { deleteStory, resolveMediaUrl } from "../api/story";
 
@@ -205,10 +207,9 @@ export default function StoryViewerModal({
     // Reset the blocked flag for this new video story.
     setPlayBlocked(false);
 
-    if (paused) {
-      video.pause();
-      return;
-    }
+    paused
+? video.pause()
+: video.play().catch(()=>{});
 
     const tryPlay = () => {
       video.play().catch(() => {
@@ -251,6 +252,9 @@ export default function StoryViewerModal({
         goPrev();
       } else if (e.key === "Escape") {
         onClose();
+      } else if(e.code === "Space"){
+        e.preventDefault();
+        setPaused(v=>!v);
       }
     };
 
@@ -308,17 +312,62 @@ export default function StoryViewerModal({
       }
     } catch (err) {
       console.error("Failed to delete story:", err);
-      alert("Failed to delete story");
+      toast.error("Unable to delete story");
     } finally {
       setDeleting(false);
     }
   };
 
+  useEffect(()=>{
+
+const next=activeStories[storyIdx+1];
+
+if(!next) return;
+
+if(next.type==="image"){
+
+const img=new Image();
+
+img.src=resolveMediaUrl(next.media);
+
+}else{
+
+const video=document.createElement("video");
+
+video.src=resolveMediaUrl(next.media);
+
+}
+
+},[storyIdx]);
+
   const handleZoneClick = (zone: "prev" | "next") => {
     if (zone === "prev") goPrev();
     else goNext();
   };
+  const longPressRef = useRef<number>();
+  const handlePointerDown = () => {
+  longPressRef.current = window.setTimeout(() => {
+    setPaused(true);
+  }, 200);
+};
 
+const handlePointerUp = () => {
+  if (longPressRef.current) {
+    clearTimeout(longPressRef.current);
+  }
+
+  setPaused(false);
+};
+const [liked, setLiked] = useState(false);
+const [showHeart, setShowHeart] = useState(false);
+const handleDoubleClick = () => {
+    setLiked(true);
+    setShowHeart(true);
+
+    setTimeout(() => {
+        setShowHeart(false);
+    },700);
+}
   return (
     <AnimatePresence>
       {open && activeStory && (
@@ -327,6 +376,7 @@ export default function StoryViewerModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          onDoubleClick={handleDoubleClick}
         >
           <motion.div
             initial={{ scale: 0.9, y: 40, opacity: 0 }}
@@ -334,8 +384,9 @@ export default function StoryViewerModal({
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ duration: 0.25 }}
             className="relative h-[90vh] w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-2xl"
-            onMouseEnter={() => setPaused(true)}
-            onMouseLeave={() => setPaused(false)}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
           >
             {/* ---------- Media ---------- */}
             <div className="flex h-full items-center justify-center bg-black">
@@ -363,12 +414,26 @@ export default function StoryViewerModal({
                 />
               ) : (
                 <img
-                  key={activeStory._id}
                   src={resolveMediaUrl(activeStory.media)}
-                  alt=""
+                  alt={activeStory.caption || "Story"}
                   className="h-full w-full object-contain"
                 />
               )}
+              <AnimatePresence>
+              {showHeart && (
+              <motion.div
+              initial={{scale:0,opacity:0}}
+              animate={{scale:1.4,opacity:1}}
+              exit={{scale:2,opacity:0}}
+              className="absolute inset-0 flex items-center justify-center pointer-events-none"
+              >
+              <HiHeart
+              className="text-white drop-shadow-2xl"
+              size={120}
+              />
+              </motion.div>
+              )}
+              </AnimatePresence>
             </div>
 
             {/* ---------- Manual play button (autoplay blocked) ---------- */}
@@ -409,7 +474,7 @@ export default function StoryViewerModal({
                       animate={{ width: `${fill}%` }}
                       transition={
                         isActive && activeDuration
-                          ? { duration: activeDuration / 1000, ease: "linear" }
+                          ? { duration: 0.05 }
                           : { duration: 0.2 }
                       }
                     />
@@ -422,10 +487,14 @@ export default function StoryViewerModal({
             <div className="absolute left-0 right-0 top-8 z-20 flex items-center justify-between px-4">
               <div className="flex items-center gap-3">
                 <img
-                  src={resolveMediaUrl(activeGroup.user.avatar || "")}
-                  alt={activeGroup.user.name}
-                  className="h-11 w-11 rounded-full border-2 border-violet-500 object-cover"
-                />
+  src={
+    activeGroup.user?.avatar
+      ? resolveMediaUrl(activeGroup.user.avatar)
+      : "/default-avatar.png"
+  }
+  alt={activeGroup.user?.name || "User"}
+  className="h-11 w-11 rounded-full border-2 border-violet-500 object-cover"
+/>
                 <div>
                   <h3 className="font-semibold text-white">
                     {activeGroup.user.name}

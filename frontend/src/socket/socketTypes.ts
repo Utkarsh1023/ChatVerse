@@ -84,17 +84,25 @@ export type ServerToClientEvents = {
     conversationId?: string;
     messageIds?: string[];
   }) => void;
-  friendRequestReceived: (data: {
+friendRequestReceived: (data: {
     request: FriendRequestUser;
     count: number;
   }) => void;
   friendRequestAccepted: (data: { friend: FriendRequestUser }) => void;
-friendRequestRejected: (data: { userId: SocketUserId }) => void;
+  friendRequestRejected: (data: { userId: SocketUserId }) => void;
+
+  // Post-action friend request events (accept/decline)
+  friendAccepted: (data: { friend: FriendRequestUser; by: string }) => void;
+  friendDeclined: (data: { userId: SocketUserId }) => void;
+  "friend:accepted": (data: { friend: FriendRequestUser; by: string }) => void;
+  "friend:declined": (data: { userId: SocketUserId }) => void;
+
+  // Notification status update (single notification, no full refetch)
+  "notification:updated": (notification: Record<string, unknown>) => void;
 
 // Friends Dashboard real-time events
   friendOnline: (data: { userId: SocketUserId }) => void;
   friendOffline: (data: { userId: SocketUserId }) => void;
-  friendAccepted: (data: { friend: FriendRequestUser; by: string }) => void;
   friendRemoved: (data: { removedBy: string; userId: string }) => void;
   requestReceived: (data: {
     request: FriendRequestUser;

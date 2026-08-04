@@ -57,19 +57,31 @@ export const acceptFriendRequest = async (
     throw new ApiError(400, "Invalid request");
   }
 
-  const me = await User.findById(userId);
+const me = await User.findById(userId);
   const sender = await User.findById(senderId);
 
   if (!me || !sender) {
     throw new ApiError(404, "User not found");
   }
 
-  // There must actually be a pending request from this sender.
-  if (!me.friendRequests.some((id) => id.equals(sender._id))) {
+  // There must actually be a pending request from this sender. Check both the
+  // legacy `User.friendRequests` array AND the FriendRequest collection (the
+  // source of truth for the dashboard) — the array can fall out of sync while
+  // a pending request still exists, which previously broke notification-triggered
+  // accepts with a misleading "No pending friend request" error.
+  const inArray = me.friendRequests.some((id) => id.equals(sender._id));
+  const inCollection = await FriendRequest.exists({
+    sender: sender._id,
+    receiver: me._id,
+    status: "pending",
+  });
+
+  if (!inArray && !inCollection) {
     throw new ApiError(404, "No pending friend request from this user");
   }
 
-  // Remove the pending request from both sides.
+  // Remove the pending request from both sides (idempotent — safe if the
+  // arrays are already empty).
   me.friendRequests = me.friendRequests.filter((id) => !id.equals(sender._id));
   sender.sentRequests = sender.sentRequests.filter((id) => !id.equals(me._id));
 
@@ -128,11 +140,20 @@ export const rejectFriendRequest = async (
     throw new ApiError(404, "User not found");
   }
 
-  if (!me.friendRequests.some((id) => id.equals(sender._id))) {
+  // Same fallback as accept: verify against BOTH the legacy array and the
+  // FriendRequest collection so a desynced array can't block a valid reject.
+  const inArray = me.friendRequests.some((id) => id.equals(sender._id));
+  const inCollection = await FriendRequest.exists({
+    sender: sender._id,
+    receiver: me._id,
+    status: "pending",
+  });
+
+  if (!inArray && !inCollection) {
     throw new ApiError(404, "No pending friend request from this user");
   }
 
-me.friendRequests = me.friendRequests.filter((id) => !id.equals(sender._id));
+  me.friendRequests = me.friendRequests.filter((id) => !id.equals(sender._id));
   sender.sentRequests = sender.sentRequests.filter((id) => !id.equals(me._id));
 
   await Promise.all([me.save(), sender.save()]);

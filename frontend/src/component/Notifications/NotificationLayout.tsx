@@ -5,6 +5,7 @@ import NotificationsList from "./NotificationsList";
 import RightNotificationPanel from "./RightNotificationPanel"
 import MobileBottomNav from "../layouts/MobileBottomNav";
 import CreatePostModal from "../CreatePostModel";
+import CreateSearchModal from "../CreateSearchModal";
 import {useState} from "react";
 export default function NotificationsPage() {
     const user = { username: "" };
@@ -59,6 +60,7 @@ export default function NotificationsPage() {
           "
         >
           <MobileBottomNav
+          onOpenSearch={() => setOpenSearch(true)}
             onOpenCreatePost={() => setOpenCreatePost(true)}
           />
         </div>
@@ -66,6 +68,10 @@ export default function NotificationsPage() {
           open={openCreatePost}
           onClose={() => setOpenCreatePost(false)}
         />
+        <CreateSearchModal
+                  open={openSearch}
+                  onClose={() => setOpenSearch(false)}
+              />
     </div>
   );
 }

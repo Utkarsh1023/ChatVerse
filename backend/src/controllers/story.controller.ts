@@ -115,6 +115,7 @@ export const getStories = async (req: Request, res: Response) => {
           caption: st.caption,
           createdAt: st.createdAt,
           expiresAt: st.expiresAt,
+          user,
         })),
       }));
 

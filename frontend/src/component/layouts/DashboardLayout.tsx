@@ -95,7 +95,7 @@ const [activeConversationId, setActiveConversationId] = useState<string | null>(
   const handleStartConversation = useCallback(
     async (user: User): Promise<Conversation> => {
       const conversation = await createOrGetConversation(user._id);
-
+      
       setConversations((prev) => {
         const exists = prev.some((c) => c._id === conversation._id);
         return exists ? prev : [conversation, ...prev];
@@ -109,7 +109,7 @@ const [activeConversationId, setActiveConversationId] = useState<string | null>(
     },
     []
   );
-
+  
   return (
 <div className="h-screen bg-slate-950 p-2">
   <div className="mx-auto h-full max-w-full overflow-hidden pb-16 lg:pb-0">
@@ -138,11 +138,12 @@ const [activeConversationId, setActiveConversationId] = useState<string | null>(
             </div>
 
             {/* Chat Window (flexes) */}
-            <motion.div 
-              initial={{x:50}}
-              animate={{x:0}}
-              transition={{duration:0.25}}
-              className={`${showChat ? "flex" : "hidden"} min-w-0 flex-1 lg:flex`}>
+            <motion.div
+              initial={{ x: 50 }}
+              animate={{ x: 0 }}
+              transition={{ duration: 0.25 }}
+              className={`${showChat ? "flex" : "hidden"} min-w-0 flex-1 overflow-hidden lg:flex`}
+            >
               <ChatWindow
                 activeConversationId={activeConversationId}
                 activePeerId={activePeerId}
@@ -175,6 +176,7 @@ const [activeConversationId, setActiveConversationId] = useState<string | null>(
         "
       >
         <MobileBottomNav
+        onOpenSearch={() => setOpenSearch(true)}
           onOpenCreatePost={() => setCreatePostOpen(true)}
         />
       </div>

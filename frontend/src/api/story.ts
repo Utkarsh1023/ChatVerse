@@ -6,11 +6,18 @@ import type { StoryGroup, StoryItem, StoryUser } from "../types/story";
  * files as `/uploads/...` and remote (Cloudinary) URLs as absolute http(s)
  * strings — this helper handles both.
  */
-export const resolveMediaUrl = (media: string) => {
-  if (!media) return "";
-  if (media.startsWith("http://") || media.startsWith("https://")) return media;
-  const base = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") || "http://localhost:5000";
-  return `${base}${media}`;
+const API_BASE =
+  (import.meta.env.VITE_API_URL || "http://localhost:5000/api").replace(
+    "/api",
+    ""
+  );
+
+export const resolveMediaUrl = (url?: string) => {
+  if (!url) return "";
+
+  if (url.startsWith("http")) return url;
+
+  return `${API_BASE}${url}`;
 };
 
 /** POST /stories — upload a new story (creates a doc under the SAME user). */

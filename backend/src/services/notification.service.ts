@@ -10,6 +10,7 @@ import {
   emitNewNotification,
   emitNotificationRead,
   emitNotificationDelete,
+  emitNotificationUpdated,
   emitReadAll,
   emitUnreadCount,
 } from "../socket/notification.socket";
@@ -122,6 +123,50 @@ export const markRead = async (
 
   emitNotificationRead(recipientId, notificationId);
   await emitUnreadCount(recipientId);
+};
+
+/**
+ * Update the status of a friend-request notification to "accepted" or
+ * "declined", then emit the updated notification in real time so the affected
+ * card re-renders without a full list refetch.
+ *
+ * Returns the populated notification (or null if none found) so the caller can
+ * also emit other events if needed.
+ */
+export const updateNotificationStatus = async (
+  recipientId: string,
+  senderId: string,
+  status: "accepted" | "declined"
+) => {
+  if (!mongoose.Types.ObjectId.isValid(senderId)) {
+    throw new ApiError(400, "Invalid sender id");
+  }
+
+  const notification = await Notification.findOneAndUpdate(
+    {
+      recipient: recipientId,
+      sender: senderId,
+      type: "friend_request",
+      status: "pending",
+    },
+    { status },
+    { new: true }
+  );
+
+  if (!notification) return null;
+
+  const populated = await Notification.findById(notification._id)
+    .populate("sender", SENDER_SELECT)
+    .populate("post", "media")
+    .populate("comment", "text")
+    .populate("story", "media")
+    .populate("message", "text attachments")
+    .populate("conversation", "participants")
+    .lean();
+
+  emitNotificationUpdated(recipientId, populated);
+
+  return populated;
 };
 
 /** Mark all of a recipient's notifications as read. */

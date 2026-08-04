@@ -521,7 +521,7 @@ socket.on("messagesSeen", ({ messageIds }) => {
       className="flex h-full flex-1 flex-col overflow-hidden rounded-3xl border border-white/10 bg-slate-900/70 backdrop-blur-xl"
     >
       {/* Header */}
-      <div className="border-b border-white/10 p-4">
+      <div className="sticky top-0 z-30 shrink-0 border-b border-white/10 bg-slate-900/95 p-4 backdrop-blur-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -588,7 +588,7 @@ socket.on("messagesSeen", ({ messageIds }) => {
       {/* Messages */}
       <div
         ref={messagesRef}
-        className="flex-1 space-y-5 overflow-y-auto p-6"
+        className="flex-1 overflow-y-auto overscroll-contain p-6 space-y-5"
       >
         {loading ? (
           <div className="flex h-full items-center justify-center">
@@ -638,7 +638,7 @@ messages.map((m) => (
       </div>
 
 {/* Input */}
-      <div className="border-t border-white/10 p-2">
+      <div className="sticky bottom-0 z-30 shrink-0 border-t border-white/10 bg-slate-900/95 p-2 backdrop-blur-xl">
         <div className="relative">
           {/* Hidden file input */}
           <input

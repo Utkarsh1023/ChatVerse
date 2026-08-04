@@ -6,7 +6,10 @@ import ApiError from "../utils/ApiError";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/verifyToken";
 import { getIO } from "../socket/socket";
-import { createNotification } from "../services/notification.service";
+import {
+  createNotification,
+  updateNotificationStatus,
+} from "../services/notification.service";
 import {
   getFriendRequests,
   acceptFriendRequest,
@@ -236,6 +239,10 @@ export const acceptRequest = asyncHandler(
 
     const { friend } = await acceptFriendRequest(myId, senderId);
 
+    // 🔔 Mark the pending friend-request notification as "accepted" and push
+    // the updated notification to the receiver's UI in real time.
+    await updateNotificationStatus(myId, senderId, "accepted");
+
     // 🔔 Real-time: notify the original sender that their request was accepted
     // (they can update "Request Sent" → "Friends" instantly).
     const io = getIO();
@@ -244,6 +251,15 @@ export const acceptRequest = asyncHandler(
       io.to(`user:${senderId}`).emit("friendRequestAccepted", {
         friend: me,
       });
+      io.to(`user:${senderId}`).emit("friend:accepted", {
+        friend: me,
+        by: String(myId),
+      });
+      io.to(`user:${myId}`).emit("friend:accepted", {
+        friend: friend,
+        by: String(myId),
+      });
+      io.to(`user:${myId}`).emit("friendsUpdated", {});
     }
 
     return res.status(200).json({
@@ -269,12 +285,23 @@ export const rejectRequest = asyncHandler(
 
     await rejectFriendRequest(myId, senderId);
 
+    // 🔔 Mark the pending friend-request notification as "declined" and push
+    // the updated notification to the receiver's UI in real time.
+    await updateNotificationStatus(myId, senderId, "declined");
+
     // 🔔 Real-time: notify the original sender that their request was declined.
     const io = getIO();
     if (io) {
       io.to(`user:${senderId}`).emit("friendRequestRejected", {
         userId: myId,
       });
+      io.to(`user:${senderId}`).emit("friend:declined", {
+        userId: myId,
+      });
+      io.to(`user:${myId}`).emit("friend:declined", {
+        userId: String(senderId),
+      });
+      io.to(`user:${myId}`).emit("friendsUpdated", {});
     }
 
     return res.status(200).json({

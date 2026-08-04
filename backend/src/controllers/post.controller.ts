@@ -6,6 +6,7 @@ import { asyncHandler } from "../utils/asyncHandler";
 import ApiError from "../utils/ApiError";
 import fs from "fs";
 import { AuthRequest } from "../middleware/auth.middleware";
+import { createNotification } from "../services/notification.service";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -232,7 +233,7 @@ export const toggleLike = asyncHandler(
     const post = await Post.findById(postId);
     if (!post) throw new ApiError(404, "Post not found");
 
-    const liked = post.likes.some((id) => id.toString() === userId);
+const liked = post.likes.some((id) => id.toString() === userId);
 
     if (liked) {
       post.likes = post.likes.filter((id) => id.toString() !== userId);
@@ -241,6 +242,17 @@ export const toggleLike = asyncHandler(
     }
 
     await post.save(); // pre-save hook recomputes likesCount
+
+// 🔔 Notify the post author when someone likes their post.
+    // createNotification already skips self-notifications (liker === author).
+    if (!liked) {
+      await createNotification({
+        recipient: post.author,
+        sender: userId,
+        type: "like_post",
+        post: String(postId),
+      });
+    }
 
     res.json({
       success: true,

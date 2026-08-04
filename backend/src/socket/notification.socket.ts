@@ -41,6 +41,16 @@ export const emitNotificationDelete = (
   io.to(`user:${recipientId}`).emit("notification:delete", { notificationId });
 };
 
+/** Event sent when a single notification's status changes (accepted/declined). */
+export const emitNotificationUpdated = (
+  recipientId: string,
+  notification: unknown
+): void => {
+  const io = getIO();
+  if (!io) return;
+  io.to(`user:${recipientId}`).emit("notification:updated", notification);
+};
+
 /** Event sent when ALL of a recipient's notifications are marked read. */
 export const emitReadAll = (recipientId: string): void => {
   const io = getIO();
@@ -67,4 +77,3 @@ export const emitUnreadCount = async (
     }
   );
 };
-

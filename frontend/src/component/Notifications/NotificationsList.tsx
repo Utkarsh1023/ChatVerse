@@ -1,19 +1,17 @@
 import NotificationItem from "./NotificationItem";
 import { useEffect, useState } from "react";
-import { getNotifications,markAllNotificationsRead, deleteNotification } from "../../api/notifications";
+import { getNotifications } from "../../api/notifications";
 import { socket } from "../../socket";
 
 export default function NotificationsList() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
-  
+
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const data = await getNotifications();
-        console.log("Notifications API:", data);
-        console.log("Notifications:", data.notifications);
         setNotifications(data.notifications);
       } catch (error) {
         console.error(error);
@@ -26,52 +24,82 @@ export default function NotificationsList() {
   }, []);
 
   useEffect(() => {
-  socket.on("notification:new", (notification) => {
-    setNotifications((prev) => [notification, ...prev]);
-  });
+    socket.on("notification:new", (notification) => {
+      setNotifications((prev) => [notification, ...prev]);
+    });
 
-  socket.on("notification:read", ({ notificationId }) => {
+    socket.on("notification:read", ({ notificationId }) => {
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification._id === notificationId
+            ? { ...notification, read: true }
+            : notification
+        )
+      );
+    });
+
+    socket.on("notification:delete", ({ notificationId }) => {
+      setNotifications((prev) =>
+        prev.filter(
+          (notification) =>
+            notification._id !== notificationId
+        )
+      );
+    });
+
+    socket.on("notification:read-all", () => {
+      setNotifications((prev) =>
+        prev.map((notification) => ({
+          ...notification,
+          read: true,
+        }))
+      );
+    });
+
+    // 🔔 Update ONLY the affected notification when its status changes
+    // (accepted/declined) instead of refetching the entire list.
+    socket.on("notification:updated", (updatedNotification) => {
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification._id === updatedNotification?._id
+            ? { ...notification, ...updatedNotification }
+            : notification
+        )
+      );
+    });
+
+    socket.on(
+      "notification:unread-count",
+      ({ unreadCount }) => {
+        setUnreadCount(unreadCount);
+      }
+    );
+
+    return () => {
+      socket.off("notification:new");
+      socket.off("notification:read");
+      socket.off("notification:delete");
+      socket.off("notification:read-all");
+      socket.off("notification:updated");
+      socket.off("notification:unread-count");
+    };
+  }, []);
+
+  const handleRequestAction = (
+    notificationId: string,
+    _senderId: string,
+    outcome: "accepted" | "declined"
+  ) => {
+    // Keep the notification in the list but mark its status so the UI renders
+    // the post-action success message instead of the buttons.
     setNotifications((prev) =>
       prev.map((notification) =>
         notification._id === notificationId
-          ? { ...notification, read: true }
+          ? { ...notification, status: outcome }
           : notification
       )
     );
-  });
-
-  socket.on("notification:delete", ({ notificationId }) => {
-    setNotifications((prev) =>
-      prev.filter(
-        (notification) =>
-          notification._id !== notificationId
-      )
-    );
-  });
-
-  socket.on("notification:read-all", () => {
-    setNotifications((prev) =>
-      prev.map((notification) => ({
-        ...notification,
-        read: true,
-      }))
-    );
-  });
-  socket.on(
-    "notification:unread-count",
-    ({ unreadCount }) => {
-      setUnreadCount(unreadCount);
-    }
-  );
-
-  return () => {
-    socket.off("notification:new");
-    socket.off("notification:read");
-    socket.off("notification:delete");
-    socket.off("notification:read-all");
-    socket.off("notification:unread-count");
   };
-}, []);
 
   const grouped = {
     today: [] as any[],
@@ -109,29 +137,38 @@ export default function NotificationsList() {
       <NotificationSection
         title="Today"
         notifications={grouped.today}
+        onRequestAction={handleRequestAction}
       />
 
       <NotificationSection
         title="Yesterday"
         notifications={grouped.yesterday}
+        onRequestAction={handleRequestAction}
       />
 
       <NotificationSection
         title="Earlier"
         notifications={grouped.earlier}
+        onRequestAction={handleRequestAction}
       />
     </div>
   );
 }
 
-  interface SectionProps {
-    title: string;
-    notifications: any[];
-  }
+interface SectionProps {
+  title: string;
+  notifications: any[];
+  onRequestAction: (
+    notificationId: string,
+    senderId: string,
+    outcome: "accepted" | "declined"
+  ) => void;
+}
 
 function NotificationSection({
   title,
   notifications,
+  onRequestAction,
 }: SectionProps) {
   return (
     <section>
@@ -163,7 +200,11 @@ function NotificationSection({
               time={item.createdAt}
               unread={!item.read}
               type={item.type}
-              postImage={item.post?.media}
+              status={item.status}
+              postImage={item.post?.media?.[0]?.url}
+              senderId={item.sender?._id}
+              notificationId={item._id}
+              onRequestAction={onRequestAction}
             />
           </div>
         ))}

@@ -99,11 +99,11 @@ export default function StoryCard({
             }}
             className="
               absolute
-              -bottom-1
-              -right-1
+              bottom-1
+              right-1
               flex
-              h-6
-              w-6
+              h-5
+              w-5
               items-center
               justify-center
               rounded-full

@@ -10,7 +10,10 @@ import {
   parsePagination,
   removeFriend,
 } from "../services/friends.service";
-import { createNotification } from "../services/notification.service";
+import {
+  createNotification,
+  updateNotificationStatus,
+} from "../services/notification.service";
 import { getIO } from "../socket/socket";
 
 /**
@@ -81,7 +84,16 @@ export const acceptRequest = asyncHandler(
       throw new ApiError(404, "User not found");
     }
 
-    if (!me.friendRequests.some((id) => id.equals(sender._id))) {
+    // Verify against BOTH the legacy array and the FriendRequest collection
+    // so a desynced array can't block a valid accept.
+    const inArray = me.friendRequests.some((id) => id.equals(sender._id));
+    const inCollection = await FriendRequest.exists({
+      sender: sender._id,
+      receiver: me._id,
+      status: "pending",
+    });
+
+    if (!inArray && !inCollection) {
       throw new ApiError(404, "No pending friend request from this user");
     }
 
@@ -115,6 +127,10 @@ export const acceptRequest = asyncHandler(
   type: "friend_accept",
 });
 
+    // 🔔 Mark the pending friend-request notification as "accepted" and push
+    // the updated notification to the receiver's UI in real time.
+    await updateNotificationStatus(myId, senderId, "accepted");
+
     const io = getIO();
     if (io) {
       const meSafe = await User.findById(myId).select(
@@ -123,6 +139,14 @@ export const acceptRequest = asyncHandler(
       io.to(`user:${senderId}`).emit("friendRequestAccepted", { friend: meSafe });
       io.to(`user:${senderId}`).emit("friendAccepted", {
         friend: meSafe,
+        by: String(me._id),
+      });
+      io.to(`user:${senderId}`).emit("friend:accepted", {
+        friend: meSafe,
+        by: String(me._id),
+      });
+      io.to(`user:${myId}`).emit("friend:accepted", {
+        friend: meSafeFor(me),
         by: String(me._id),
       });
       io.to(`user:${myId}`).emit("friendsUpdated", {});
@@ -148,11 +172,20 @@ export const rejectRequest = asyncHandler(
     const me = await User.findById(myId);
     const sender = await User.findById(senderId);
 
-    if (!me || !sender) {
+if (!me || !sender) {
       throw new ApiError(404, "User not found");
     }
 
-    if (!me.friendRequests.some((id) => id.equals(sender._id))) {
+    // Same fallback as accept: verify against BOTH the legacy array and the
+    // FriendRequest collection so a desynced array can't block a valid reject.
+    const inArray = me.friendRequests.some((id) => id.equals(sender._id));
+    const inCollection = await FriendRequest.exists({
+      sender: sender._id,
+      receiver: me._id,
+      status: "pending",
+    });
+
+    if (!inArray && !inCollection) {
       throw new ApiError(404, "No pending friend request from this user");
     }
 
@@ -161,7 +194,7 @@ export const rejectRequest = asyncHandler(
 
     await Promise.all([me.save(), sender.save()]);
 
-    await FriendRequest.updateMany(
+await FriendRequest.updateMany(
       {
         sender: sender._id,
         receiver: me._id,
@@ -170,9 +203,19 @@ export const rejectRequest = asyncHandler(
       { status: "rejected" }
     );
 
+    // 🔔 Mark the pending friend-request notification as "declined" and push
+    // the updated notification to the receiver's UI in real time.
+    await updateNotificationStatus(myId, senderId, "declined");
+
     const io = getIO();
     if (io) {
       io.to(`user:${senderId}`).emit("friendRequestRejected", { userId: myId });
+      io.to(`user:${senderId}`).emit("friend:declined", {
+        userId: myId,
+      });
+      io.to(`user:${myId}`).emit("friend:declined", {
+        userId: String(senderId),
+      });
       io.to(`user:${myId}`).emit("friendsUpdated", {});
     }
 
