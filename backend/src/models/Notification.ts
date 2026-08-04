@@ -1,20 +1,20 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
-
-export type NotificationType =
-  | "friend_request_received"
-  | "friend_request_accepted"
-  | "new_follower"
-  | "friend_removed"
-  | "friend_accepted"
-  | "system";
+import {
+  NotificationType,
+  NOTIFICATION_TYPES,
+} from "../types/notification";
 
 export interface INotification extends Document {
   /** The user who receives the notification. */
-  user: Types.ObjectId;
-  /** The user who triggered the notification (actor). */
-  actor?: Types.ObjectId;
+  recipient: Types.ObjectId;
+  /** The user who triggered the notification (actor). Optional for "system". */
+  sender?: Types.ObjectId;
   type: NotificationType;
-  message: string;
+  post?: Types.ObjectId;
+  comment?: Types.ObjectId;
+  story?: Types.ObjectId;
+  message?: Types.ObjectId;
+  conversation?: Types.ObjectId;
   read: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -22,32 +22,46 @@ export interface INotification extends Document {
 
 const notificationSchema = new Schema<INotification>(
   {
-    user: {
+    recipient: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: [true, "Recipient is required"],
       index: true,
     },
-    actor: {
+    sender: {
       type: Schema.Types.ObjectId,
       ref: "User",
+      default: null,
     },
     type: {
       type: String,
-      enum: [
-        "friend_request_received",
-        "friend_request_accepted",
-        "new_follower",
-        "friend_removed",
-        "friend_accepted",
-        "system",
-      ],
-      default: "system",
+      enum: NOTIFICATION_TYPES,
+      required: [true, "Notification type is required"],
+    },
+    post: {
+      type: Schema.Types.ObjectId,
+      ref: "Post",
+      default: null,
+    },
+    comment: {
+      type: Schema.Types.ObjectId,
+      ref: "Comment",
+      default: null,
+    },
+    story: {
+      type: Schema.Types.ObjectId,
+      ref: "Story",
+      default: null,
     },
     message: {
-      type: String,
-      required: true,
-      trim: true,
+      type: Schema.Types.ObjectId,
+      ref: "Message",
+      default: null,
+    },
+    conversation: {
+      type: Schema.Types.ObjectId,
+      ref: "Conversation",
+      default: null,
     },
     read: {
       type: Boolean,
@@ -56,11 +70,22 @@ const notificationSchema = new Schema<INotification>(
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
-// Fast "latest activity" query per user.
-notificationSchema.index({ user: 1, createdAt: -1 });
+// ---------------------------------------------------------------------------
+// Indexes — performance for the two hottest queries:
+//  1. "latest activity feed" per recipient (sorted newest first)
+//  2. "unread badge count" per recipient
+// ---------------------------------------------------------------------------
+
+// Newest-first feed per recipient. Skip the `_id` tiebreaker (rarely needed).
+notificationSchema.index({ recipient: 1, createdAt: -1 });
+
+// Fast unread counting + filtering unread notifications.
+notificationSchema.index({ recipient: 1, read: 1, createdAt: -1 });
 
 const Notification = mongoose.model<INotification>(
   "Notification",
@@ -68,3 +93,4 @@ const Notification = mongoose.model<INotification>(
 );
 
 export default Notification;
+

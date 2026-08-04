@@ -4,6 +4,7 @@ import type http from "http";
 import Message from "../models/Message";
 import Conversation from "../models/Conversation";
 import User from "../models/User";
+import * as notificationSocket from "./notification.socket";
 
 const onlineUsers = new Map<string, string>();
 
@@ -78,12 +79,23 @@ export const notifyFriendsUpdated = async (userId: string): Promise<void> => {
 };
 
 export const initSocket = (server: http.Server) => {
-  const socketServer = new Server(server, {
-    cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:5173",
-      credentials: true,
+  const allowedOrigins = [
+  "http://localhost:5173", // local development
+  "https://chat-verse-gules.vercel.app", // deployed frontend
+];
+
+const socketServer = new Server(server, {
+  cors: {
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Origin not allowed by CORS"));
+      }
     },
-  });
+    credentials: true,
+  },
+});
 
   // Store the instance for external access (controllers/services).
   io = socketServer;
@@ -111,6 +123,19 @@ export const initSocket = (server: http.Server) => {
 
   socketServer.on("connection", (socket) => {
     console.log("🟢 Socket connected:", socket.id);
+
+    // 🔔 Notification sync handlers (mark read, read-all, delete, get-unread).
+    const registerNotificationHandlers =
+      (notificationSocket as any).registerNotificationHandlers ||
+      (notificationSocket as any).default?.registerNotificationHandlers;
+
+    if (typeof registerNotificationHandlers === "function") {
+      registerNotificationHandlers({
+        server: socketServer,
+        socket,
+        userId: (socket as any).userId,
+      });
+    }
 
     socket.on("join", async () => {
       const userId = (socket as any).userId;

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import {Link} from "react-router-dom"
+import {Link, useNavigate} from "react-router-dom"
 import SettingsSidebar from "./SettingsSidebar";
 import {HiOutlineArrowLeft} from "react-icons/hi"
 import { AnimatePresence, motion } from "framer-motion";
@@ -13,6 +13,7 @@ import ContactSupport from "./ContactSupport";
 import { HiOutlineUser, HiOutlinePaintBrush, HiOutlineBell, HiOutlineShieldCheck, HiOutlineLockClosed, HiOutlineQuestionMarkCircle, HiOutlineExclamationTriangle, HiOutlineComputerDesktop, } from "react-icons/hi2";
 import { MdOutlineLogout  } from "react-icons/md";
 import MobileBottomNav from "../layouts/MobileBottomNav";
+import { useAuth } from "../../context/AuthContext";
 
 type SettingTab =
   | "account"
@@ -58,11 +59,12 @@ export default function SettingsPage() {
   const [settingSidebar, setSettingSidebar] = useState<SettingTab>(
     "account"
   );
+  const [createPostOpen, setCreatePostOpen] = useState(false);
 
   const content = useMemo(() => {
     switch (settingSidebar) {
       case "account":
-        return <AccountSettings />;
+        return <AccountSettings onClose={() => navigate(-1)} />;
       case "appearance":
         return <AppearanceSettings />;
       case "notifications":
@@ -76,9 +78,24 @@ export default function SettingsPage() {
       case "contact":
         return <ContactSupport />
       default:
-        return <AccountSettings  />;
+        return <AccountSettings  onClose={() => navigate(-1)}/>;
     }
   }, [settingSidebar]);
+  
+  const {logout} =useAuth();
+  const navigate= useNavigate();
+
+  const handleLogout = async () => {
+    console.log("Logout clicked");
+
+    try {
+      await logout();
+      console.log("Logout API success");
+      navigate("/auth", { replace: true });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
 
   return (
   <div className="h-screen overflow-hidden bg-[#0F172A]">
@@ -145,6 +162,7 @@ export default function SettingsPage() {
       whileTap={{
         scale: 0.96,
       }}
+      onClick={handleLogout}
       className="
         flex
         shrink-0
@@ -252,7 +270,7 @@ export default function SettingsPage() {
       </div>
 
     </div>
-    <MobileBottomNav />
+    <MobileBottomNav onOpenCreatePost={() => setCreatePostOpen(true)}/>
   </div>
 );
 }

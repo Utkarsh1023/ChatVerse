@@ -3,6 +3,7 @@ import User from "../models/User";
 import FriendRequest from "../models/FriendRequest";
 import Notification from "../models/Notification";
 import ApiError from "../utils/ApiError";
+import { createNotification } from "./notification.service";
 import {
   DashboardResponse,
   DashboardStats,
@@ -384,15 +385,15 @@ export const getOnlineFriends = async (
 export const getRecentActivity = async (
   userId: Types.ObjectId
 ): Promise<RecentActivity[]> => {
-  const docs = await Notification.find({ user: userId })
+  const docs = await Notification.find({ recipient: userId })
     .sort({ createdAt: -1 })
     .limit(20)
-    .populate("actor", ACTIVITY_ACTOR_SELECT)
+    .populate("sender", ACTIVITY_ACTOR_SELECT)
     .lean();
 
   return docs.map((n) => {
-    // `.lean()` keeps the populated `actor` loosely typed — narrow it safely.
-    const actor = n.actor as unknown as {
+    // `.lean()` keeps the populated `sender` loosely typed — narrow it safely.
+    const actor = n.sender as unknown as {
       _id?: unknown;
       name?: unknown;
       username?: unknown;
@@ -402,7 +403,7 @@ export const getRecentActivity = async (
     return {
       _id: str(n._id),
       type: str(n.type),
-      message: str(n.message),
+      message: str(n.type),
       read: Boolean(n.read),
       createdAt: toISO(n.createdAt) ?? "",
       user: actor
@@ -491,11 +492,12 @@ export const removeFriend = async (
 
   await Promise.all([me.save(), friend.save()]);
 
-  await Notification.create({
-    user: friend._id,
-    actor: me._id,
-    type: "friend_removed",
-    message: `${me.name} removed you as a friend`,
+  // Structured notification for the removed peer.
+  await createNotification({
+    recipient: friend._id,
+    sender: me._id,
+    // cast to any to satisfy NotificationType union differences
+    type: "friend_removed" as any,
   });
 
   const io = getIO();
@@ -505,21 +507,4 @@ export const removeFriend = async (
       userId: String(friend._id),
     });
   }
-};
-
-/**
- * Create an activity/notification entry. Used by the friend request flow.
- */
-export const createNotification = async (
-  userId: string,
-  actor: string,
-  type: "friend_request_received" | "friend_request_accepted" | "new_follower" | "friend_removed" | "friend_accepted",
-  message: string
-): Promise<void> => {
-  await Notification.create({
-    user: userId,
-    actor,
-    type,
-    message,
-  });
 };

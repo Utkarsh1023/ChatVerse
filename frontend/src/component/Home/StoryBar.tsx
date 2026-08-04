@@ -54,7 +54,7 @@ export default function StoryBar({
   const hasMyStories = Boolean(myStoryGroup && myStoryGroup.stories.length > 0);
 
   return (
-    <section className="mb-8">
+    <section className="mb-2">
       <div
         className="
           flex

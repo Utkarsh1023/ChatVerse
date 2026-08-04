@@ -4,6 +4,7 @@ import Sidebar from "./Sidebar";
 import ChatList from "./ChatList";
 import ChatWindow from "./ChatWindow";
 import CreatePostModal from "../CreatePostModel";
+import CreateSearchModal from "../CreateSearchModal";
 import { getConversations, createOrGetConversation } from "../../services/chatService";
 import type { Conversation } from "../../types/chat";
 import type { User } from "../../types/user";
@@ -15,6 +16,7 @@ export default function DashboardLayout() {
 const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [searchParams] = useSearchParams();
+  const [openSearch, setOpenSearch] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -109,14 +111,16 @@ const [activeConversationId, setActiveConversationId] = useState<string | null>(
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 p-2 pb-20 lg:pb-2">
-      <div className="mx-auto h-[calc(100vh-80px)] lg:h-[calc(100vh-24px)] max-w-full overflow-hidden">
+<div className="h-screen bg-slate-950 p-2">
+  <div className="mx-auto h-full max-w-full overflow-hidden pb-16 lg:pb-0">
         <div className="flex h-full overflow-hidden rounded-none bg-slate-900 lg:gap-2 lg:rounded-3xl lg:bg-slate-900/70 lg:backdrop-blur-xl">
           {/* Sidebar (always visible) */}
           <div className="hidden shrink-0 lg:block">
             <Sidebar 
               username={user.username}
               onOpenCreatePost={() => setCreatePostOpen(true)}
+              onOpenSearch={() => setOpenSearch(true)}
+              
             />
           </div>
 
@@ -156,26 +160,28 @@ const [activeConversationId, setActiveConversationId] = useState<string | null>(
       onClose={() => setCreatePostOpen(false)}
     />
       </div>
-      <div className="
+      <div
+        className="
           fixed
-          bottom-4
-          left-4
-          right-4
+          inset-x-0
+          bottom-0
           z-50
-          rounded-2xl
-          border
+          border-t
           border-white/10
-          bg-slate-900/90
-          backdrop-blur-xl
-          shadow-2xl
+          bg-slate-900/95
+          backdrop-blur-2xl
           lg:hidden
-      "
+          pb-[env(safe-area-inset-bottom)]
+        "
       >
         <MobileBottomNav
           onOpenCreatePost={() => setCreatePostOpen(true)}
         />
       </div>
-      
+      <CreateSearchModal
+                open={openSearch}
+                onClose={() => setOpenSearch(false)}
+            />
     </div>
   );
 }

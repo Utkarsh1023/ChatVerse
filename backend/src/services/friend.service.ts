@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import User from "../models/User";
 import FriendRequest from "../models/FriendRequest";
 import ApiError from "../utils/ApiError";
-import { createNotification } from "./friends.service";
+import { createNotification } from "./notification.service";
 
 /**
  * Friend request service layer.
@@ -93,13 +93,12 @@ export const acceptFriendRequest = async (
     { status: "accepted" }
   );
 
-  // Activity/notification for the original sender.
-  await createNotification(
-    String(sender._id),
-    String(me._id),
-    "friend_request_accepted",
-    `${me.name} accepted your friend request`
-  );
+// Activity/notification for the original sender.
+  await createNotification({
+    recipient: sender._id,
+    sender: me._id,
+    type: "friend_accept",
+  });
 
   // Return the freshly-added friend (safe fields only).
   const friend = await User.findById(sender._id).select(FRIEND_SELECT);

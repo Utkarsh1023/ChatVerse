@@ -1,7 +1,6 @@
 import mongoose, { Types } from "mongoose";
 import User from "../models/User";
 import Follow from "../models/Follow";
-import Notification from "../models/Notification";
 import ApiError from "../utils/ApiError";
 import {
   ConnectionsResponse,
@@ -17,10 +16,10 @@ import {
   getOnlineFriends,
   getRecentActivity,
   parsePagination,
-  createNotification,
   str,
   toISO,
 } from "./friends.service";
+import { createNotification } from "./notification.service";
 import { getIO } from "../socket/socket";
 
 /** Safe fields for a follower/following card. */
@@ -270,13 +269,12 @@ export const followUser = async (
     { upsert: true }
   );
 
-  // 🔔 Notification + socket event for the target.
-  await createNotification(
-    String(target._id),
-    String(me._id),
-    "new_follower",
-    `${me.name} started following you`
-  );
+  // 🔔 Structured notification + socket event for the target.
+  await createNotification({
+    recipient: target._id,
+    sender: me._id,
+    type: "follow",
+  });
 
   const io = getIO();
   if (io) {

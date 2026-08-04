@@ -81,9 +81,8 @@ export default function HomePage() {
   return (
     <>
       {/* Home */}
-      <div className="min-h-screen bg-slate-950 p-2">
-        <div className="mx-auto h-[calc(100vh-24px)] max-w-full overflow-hidden">
-
+      <div className="h-screen bg-slate-950 p-2 pb-20 d:pb-2">
+        <div className="mx-auto h-[calc(100vh-24px-80px)] md:h-[calc(100vh-22px)] max-w-full overflow-hidden">
           <div className="flex h-full gap-2 overflow-hidden rounded-3xl bg-slate-900/70 backdrop-blur-xl">
             {/* Sidebar */}
             <div className="hidden shrink-0 lg:block">
@@ -106,14 +105,14 @@ export default function HomePage() {
                     onCreatePost={() => setOpenPost(true)}
                   />
 
-                  <div className="flex-1 overflow-y-auto p-6">
+                  <div className="flex-1 mt-2 overflow-y-auto pb-28 md:pb-0">
 
                     <StoryBar
                       groups={storyGroups}
                       onCreateStory={() => setOpenStory(true)}
                       onOpenStory={(group) => setSelectedUserId(group.user._id)}
                     />
-
+                    <div className="border-t border-slate-800" />
                     <Feed posts={posts} error={postsError} loading={postsLoading} />
 
                   </div>
@@ -132,9 +131,24 @@ export default function HomePage() {
           </div>
 
         </div>
-        <MobileBottomNav
-  onOpenCreatePost={() => setOpenPost(true)}
-/>
+        <div
+  className="
+    fixed
+    inset-x-0
+    bottom-0
+    z-50
+    border-t
+    border-slate-800
+    bg-slate-900/95
+    backdrop-blur-xl
+    pb-[env(safe-area-inset-bottom)]
+    lg:hidden
+  "
+>
+  <MobileBottomNav
+    onOpenCreatePost={() => setOpenPost(true)}
+  />
+</div>
       </div>
 
       {/* Modal - OUTSIDE the page */}

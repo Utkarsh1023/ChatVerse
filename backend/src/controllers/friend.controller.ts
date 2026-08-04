@@ -6,7 +6,7 @@ import ApiError from "../utils/ApiError";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/verifyToken";
 import { getIO } from "../socket/socket";
-import { createNotification } from "../services/friends.service";
+import { createNotification } from "../services/notification.service";
 import {
   getFriendRequests,
   acceptFriendRequest,
@@ -188,13 +188,12 @@ export const sendFriendRequest = asyncHandler(
       status: "pending",
     });
 
-    // 🔔 Notification for the receiver ("X sent you a friend request").
-    await createNotification(
-      String(receiverObjectId),
-      String(senderObjectId),
-      "friend_request_received",
-      `${sender.name} sent you a friend request`
-    );
+    // 🔔 Structured notification for the receiver.
+    await createNotification({
+      recipient: receiverObjectId,
+      sender: senderObjectId,
+      type: "friend_request",
+    });
 
     // 🔔 Real-time: notify the receiver (if online) that they have a new
     // friend request so their panel updates without a manual refresh.

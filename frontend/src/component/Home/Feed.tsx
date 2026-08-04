@@ -49,7 +49,7 @@ export default function Feed({ posts, error, loading }: FeedProps) {
   // Loading state
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl py-8">
+      <div className="mx-auto max-w-3xl py-2">
         <div className="flex items-center justify-center py-20">
           <div className="flex flex-col items-center gap-4">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-700 border-t-fuchsia-500"></div>
@@ -90,7 +90,7 @@ export default function Feed({ posts, error, loading }: FeedProps) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl py-8">
+    <div className="mx-auto max-w-3xl py-2">
       {posts.map((post) => {
         // Normalize author (backend may send `author` as object or string id).
         const author =

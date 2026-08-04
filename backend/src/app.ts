@@ -17,6 +17,7 @@ import userRoutes from "./routes/user.routes";
 import profileRoutes from "./routes/profile.routes";
 import storyRoutes from "./routes/story.routes";
 import commentRoutes from "./routes/comment.routes";
+import notificationRoutes from "./routes/notification.routes";
 import path from "path";
 
 const app = express();
@@ -24,9 +25,8 @@ const app = express();
 app.set("trust proxy", 1);
 
 const allowedOrigins = [
-  process.env.CLIENT_URL || "http://localhost:5173",
   "http://localhost:5173",
-  "http://127.0.0.1:5173",
+  "https://chat-verse-gules.vercel.app",
 ];
 
 app.use(
@@ -36,7 +36,7 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      return callback(new Error("Not allowed by CORS"));
+      return callback(new Error("Origin not allowed by CORS"));
     },
     credentials: true,
   })
@@ -111,6 +111,9 @@ app.use("/api/stories", storyRoutes);
 
 // Comment routes
 app.use("/api/comments", commentRoutes);
+
+// Notification routes
+app.use("/api/notifications", notificationRoutes);
 
 // 404 handler for unknown API routes — prevents hanging requests.
 app.use((_req: Request, res: Response) => {
